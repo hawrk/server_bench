@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="GBK"?>
+<order_config>
+
+	<clog logdir="../log/water/" loglevel="13" logsize="200000000" logprefix="speedpos_order_" />
+
+	<core_cfg token_prefix="" token_len="10" serial_prefix="" serial_len="12" groupon_lock_file="/tmp/city_groupon.lock" merchant_id_lock_file="/tmp/city_user_order_merchant_id.lock" uin_lock_file_filter_svr="/tmp/city_user_groupon_main_uin.lock"
+		secure_token="^$_nekot_$^" />
+
+	<user_order_ttc use_l5="0" l5mod="18440" l5cmd="65536" host="10.100.100.65" port="9004" tbname="t_order" timeout="30" />
+	<user_refund_item_ttc use_l5="0" l5mod="19521" l5cmd="1114112" host="10.100.100.65" port="9008" tbname="t_user_refund_item" timeout="30" />
+
+	<order_nb_db ip="10.100.100.65" port="3338" db="city_mch_order" user="speedpos" pwd="speedpos" />
+   <!-- <order_mysql ip = "10.100.100.65" port = "3306" db = "city_user_groupon" user = "speedpos" pwd = "speedpos" / > -->
+	
+	<id_gen_server use_l5="0" l5mod="28481" l5cmd="262144" host="10.100.100.65" port="13451" timeout="3" />
+	<redis_server use_l5="0" l5mod="28481" l5cmd="131072" host="172.27.5.45" port="13487" timeout="3" listkeyname="cps_order_sync" />
+	
+	<db_cfg>
+	  <db_server_0 ip="10.100.100.65" port="3338"  user="speedpos"   pwd="speedpos"  type="1"  work_no = "40"/>
+	  <db_server_1 ip="10.97.39.41"   port="3338"  user="speedpos"   pwd="speedpos@123" type="1"  work_no = "41" />
+	</db_cfg>
+	
+	<merchant_cfg merid_prefix="139" merid_len = "11"/>
+
+	<!-- ipckey shared by OrderServer and notify! -->
+	<notify ipckey="13680" worder_num="6">
+		<base logdir="/data/log/order_notify/" loglevel="6" logsize="200000000" logprefix="order_notify_" />
+	</notify>
+
+	<singleLimitAtLeast underlyingRule="1" />
+</order_config>

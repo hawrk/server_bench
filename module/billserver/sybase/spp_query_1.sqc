@@ -1,0 +1,628 @@
+#include <stdio.h>
+#include <string.h>
+#include "spp_query_1.h"
+#include <time.h>
+
+//建立通讯区域
+EXEC SQL INCLUDE SQLCA;
+ 
+/* 
+** These tokens must be declared in a declare section
+** because they are used in declare sections below.
+*/
+EXEC SQL BEGIN DECLARE SECTION;
+#define TYPESIZE    13
+#define TIDSIZE     6
+EXEC SQL END DECLARE SECTION;
+
+#define  EOLN   '\0'
+/* 
+** Forward declarations of the error and message handlers and
+** other subroutines called from main().
+*/
+void    error_handler();
+void    warning_handler();
+
+
+int spp_bill_Insert_Update_Del( int i_cmd, T_STSYBASE_IN_PARAM* in_param,char* str_sql,int* _count)
+{
+	printf( "[%s:%d] spp_bill_Insert_Update.\n", __FILE__, __LINE__ );
+	FILE *fp;
+	fp = fopen("log.txt","a");
+	fprintf(fp,"[%s:%d] spp_bill_Insert_Update.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[30];
+	char    c_DbPass[30];
+	char    c_DbServer[30];
+	char    c_DbName[32];
+	char    c_sql_str[2048];
+    EXEC SQL END DECLARE SECTION;
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+	strcpy(c_sql_str,str_sql);
+	//用于存放内部数据的结构体
+    //memset( &S_PT_SPP_ORDER_INSERT, 0x00, sizeof(S_PT_SPP_ORDER_INSERT) );
+	//memcpy( &S_PT_SPP_ORDER_INSERT, pT_SPP_QUERY_1, sizeof(S_PT_SPP_ORDER_INSERT) );
+   
+    printf(">>>>>>>> str_sql = %s \n",str_sql);
+    fprintf(fp,">>>>>>>> c_sql_str = %s \n",c_sql_str);
+    //开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    //选择库表
+    EXEC SQL USE :c_DbName;
+	
+	EXEC SQL execute immediate :c_sql_str;
+	
+    EXEC SQL DISCONNECT CURRENT;
+    fclose(fp);
+	return sqlca.sqlcode;
+}
+
+int  spp_bill_Transaction(int i_cmd,T_STSYBASE_IN_PARAM* in_param,char* wxdel_sql,char* alidel_sql,char* wx_channdel_sql,char* ali_channdel_sql,int* _count)
+{
+	printf( "[%s:%d] spp_bill_Transaction.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[30];
+	char    c_DbPass[30];
+	char    c_DbServer[30];
+	char    c_DbName[32];
+    EXEC SQL END DECLARE SECTION;
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+
+   
+    //printf(">>>>>>>> str_sql = %s \n",str_sql);
+    //开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	EXEC SQL execute immediate wxdel_sql;
+	EXEC SQL execute immediate alidel_sql;
+	EXEC SQL execute immediate wx_channdel_sql;
+	EXEC SQL execute immediate ali_channdel_sql;
+	EXEC SQL COMMIT;
+
+	
+    EXEC SQL DISCONNECT CURRENT;
+	return sqlca.sqlcode;
+}
+
+
+int  spp_bill_GetPayBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetPayBillData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count)
+{
+	printf( "[%s:%d] spp_bill_GetPayBillData.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[32];
+	char    c_DbPass[32];
+	char    c_DbServer[32];
+	char    c_DbName[32];
+	int     record_cou;
+    EXEC SQL END DECLARE SECTION;
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+	//用于存放内部数据的结构体
+    memset( &S_PT_GET_PAYBILL_DATA, 0x00, sizeof(S_PT_GET_PAYBILL_DATA) );
+    memset( &S_PT_STSYBASE_IN_PARAM, 0x00, sizeof(S_PT_STSYBASE_IN_PARAM) );
+    memcpy( &S_PT_STSYBASE_IN_PARAM, in_param, sizeof(S_PT_STSYBASE_IN_PARAM) );
+
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+
+	printf(">>>>>>>> str_sql = %s\n",str_sql);
+
+	//开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    printf( "[%s:%d] spp_bill_GetPayBillData.\n", __FILE__, __LINE__ );
+
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	EXEC SQL PREPARE cou FROM count_sql; 
+	EXEC SQL DECLARE c_pay_cou CURSOR FOR cou ;
+	EXEC SQL OPEN c_pay_cou;
+	do
+	{
+		EXEC SQL FETCH c_pay_cou INTO :record_cou;
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+	} while(1);
+	EXEC SQL CLOSE c_pay_cou;
+
+	pT_SPP_BILL = (stGetPayBillData_Resp*)malloc(sizeof(stGetPayBillData_Resp) * record_cou);
+	memset(pT_SPP_BILL,0,sizeof(stGetPayBillData_Resp) * record_cou);
+
+
+	EXEC SQL PREPARE s FROM str_sql; 
+	EXEC SQL DECLARE c_pay CURSOR FOR s ;
+
+	EXEC SQL OPEN c_pay;
+	int index = 0;
+	do
+	{
+		EXEC SQL FETCH c_pay INTO :S_PT_GET_PAYBILL_DATA.mch_id, :S_PT_GET_PAYBILL_DATA.sum_shop_amount, :S_PT_GET_PAYBILL_DATA.sum_channel_profit,
+		:S_PT_GET_PAYBILL_DATA.sum_service_profit,:S_PT_GET_PAYBILL_DATA.sum_payment_profit,:S_PT_GET_PAYBILL_DATA.sum_bm_profit,
+		:S_PT_GET_PAYBILL_DATA.sum_total_commission,:S_PT_GET_PAYBILL_DATA.sum_total_fee,:S_PT_GET_PAYBILL_DATA.count;  
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+		memcpy( pT_SPP_BILL + index, &S_PT_GET_PAYBILL_DATA, sizeof(S_PT_GET_PAYBILL_DATA) );
+		index++;
+	} while ( 1 );
+    
+	EXEC SQL CLOSE c_pay;
+    EXEC SQL DISCONNECT CURRENT;
+	*_count = index;
+    return sqlca.sqlcode;
+}
+
+int  spp_bill_GetRefundBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetRefundBillData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count)
+{
+	printf( "[%s:%d] spp_bill_GetRefundBillData.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[32];
+	char    c_DbPass[32];
+	char    c_DbServer[32];
+	char    c_DbName[32];
+	int     record_cou;
+    EXEC SQL END DECLARE SECTION;
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+	//用于存放内部数据的结构体
+    memset( &S_PT_GET_REFUNDBILL_DATA, 0x00, sizeof(S_PT_GET_REFUNDBILL_DATA) );
+    memset( &S_PT_STSYBASE_IN_PARAM, 0x00, sizeof(S_PT_STSYBASE_IN_PARAM) );
+    memcpy( &S_PT_STSYBASE_IN_PARAM, in_param, sizeof(S_PT_STSYBASE_IN_PARAM) );
+
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+
+	printf(">>>>>>>> str_sql = %s\n",str_sql);
+
+	//开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    printf( "[%s:%d] spp_bill_GetRefundBillData.\n", __FILE__, __LINE__ );
+
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	EXEC SQL PREPARE cou FROM count_sql; 
+	EXEC SQL DECLARE c_refund_cou CURSOR FOR cou ;
+	EXEC SQL OPEN c_refund_cou;
+	do
+	{
+		EXEC SQL FETCH c_refund_cou INTO :record_cou;
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+	} while(1);
+	EXEC SQL CLOSE c_refund_cou;
+
+	pT_SPP_BILL = (stGetRefundBillData_Resp*)malloc(sizeof(stGetRefundBillData_Resp) * record_cou);
+	memset(pT_SPP_BILL,0,sizeof(stGetRefundBillData_Resp) * record_cou);
+
+
+	EXEC SQL PREPARE s FROM str_sql; 
+	EXEC SQL DECLARE c_refund CURSOR FOR s ;
+
+	EXEC SQL OPEN c_refund;
+	int index = 0;
+	do
+	{
+		EXEC SQL FETCH c_refund INTO :S_PT_GET_REFUNDBILL_DATA.mch_id, :S_PT_GET_REFUNDBILL_DATA.sum_shop_amount, :S_PT_GET_REFUNDBILL_DATA.sum_channel_profit,
+		:S_PT_GET_REFUNDBILL_DATA.sum_service_profit,:S_PT_GET_REFUNDBILL_DATA.sum_payment_profit,:S_PT_GET_REFUNDBILL_DATA.sum_bm_profit,
+		:S_PT_GET_REFUNDBILL_DATA.sum_total_commission,:S_PT_GET_REFUNDBILL_DATA.sum_refund_fee,:S_PT_GET_REFUNDBILL_DATA.count;  
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+		memcpy( pT_SPP_BILL + index, &S_PT_GET_REFUNDBILL_DATA, sizeof(S_PT_GET_REFUNDBILL_DATA) );
+		index++;
+	} while ( 1 );
+    
+	EXEC SQL CLOSE c_refund;
+    EXEC SQL DISCONNECT CURRENT;
+	*_count = index;
+    return sqlca.sqlcode;
+}
+
+int  spp_bill_GetChannelBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetChannelBillData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count)
+{
+	printf( "[%s:%d] spp_bill_GetChannelBillData.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[32];
+	char    c_DbPass[32];
+	char    c_DbServer[32];
+	char    c_DbName[32];
+	int     record_cou;
+    EXEC SQL END DECLARE SECTION;
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+	//用于存放内部数据的结构体
+    memset( &S_PT_GET_CHANNELBILL_DATA, 0x00, sizeof(S_PT_GET_CHANNELBILL_DATA) );
+    memset( &S_PT_STSYBASE_IN_PARAM, 0x00, sizeof(S_PT_STSYBASE_IN_PARAM) );
+    memcpy( &S_PT_STSYBASE_IN_PARAM, in_param, sizeof(S_PT_STSYBASE_IN_PARAM) );
+
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+
+	printf(">>>>>>>> str_sql = %s\n",str_sql);
+
+	//开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    printf( "[%s:%d] spp_bill_GetChannelBillData.\n", __FILE__, __LINE__ );
+
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	EXEC SQL PREPARE cou FROM count_sql; 
+	EXEC SQL DECLARE c_channel_cou CURSOR FOR cou ;
+	EXEC SQL OPEN c_channel_cou;
+	do
+	{
+		EXEC SQL FETCH c_channel_cou INTO :record_cou;
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+	} while(1);
+	EXEC SQL CLOSE c_channel_cou;
+
+	pT_SPP_BILL = (stGetChannelBillData_Resp*)malloc(sizeof(stGetChannelBillData_Resp) * record_cou);
+	memset(pT_SPP_BILL,0,sizeof(stGetChannelBillData_Resp) * record_cou);
+
+
+	EXEC SQL PREPARE s FROM str_sql; 
+	EXEC SQL DECLARE c_channel CURSOR FOR s ;
+
+	EXEC SQL OPEN c_channel;
+	int index = 0;
+	do
+	{
+		EXEC SQL FETCH c_channel INTO :S_PT_GET_CHANNELBILL_DATA.channel_id, :S_PT_GET_CHANNELBILL_DATA.sum_channel_profit;  
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+		memcpy( pT_SPP_BILL + index, &S_PT_GET_CHANNELBILL_DATA, sizeof(S_PT_GET_CHANNELBILL_DATA) );
+		index++;
+	} while ( 1 );
+    
+	EXEC SQL CLOSE c_channel;
+    EXEC SQL DISCONNECT CURRENT;
+	*_count = index;
+    return sqlca.sqlcode;
+}
+
+int  spp_bill_GetAliOverFlowData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetAliOverFlowData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count)
+{
+	printf( "[%s:%d] spp_bill_GetAliOverFlowData.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[32];
+	char    c_DbPass[32];
+	char    c_DbServer[32];
+	char    c_DbName[32];
+	int     record_cou;
+    EXEC SQL END DECLARE SECTION;
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+	//用于存放内部数据的结构体
+    memset( &S_PT_GET_ALIOVERFLOW_DATA, 0x00, sizeof(S_PT_GET_ALIOVERFLOW_DATA) );
+    memset( &S_PT_STSYBASE_IN_PARAM, 0x00, sizeof(S_PT_STSYBASE_IN_PARAM) );
+    memcpy( &S_PT_STSYBASE_IN_PARAM, in_param, sizeof(S_PT_STSYBASE_IN_PARAM) );
+
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+
+	printf(">>>>>>>> str_sql = %s\n",str_sql);
+
+	//开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    printf( "[%s:%d] spp_bill_GetAliOverFlowData.\n", __FILE__, __LINE__ );
+
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	EXEC SQL PREPARE cou FROM count_sql; 
+	EXEC SQL DECLARE c_aliover_cou CURSOR FOR cou ;
+	EXEC SQL OPEN c_aliover_cou;
+	do
+	{
+		EXEC SQL FETCH c_aliover_cou INTO :record_cou;
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+	} while(1);
+	EXEC SQL CLOSE c_aliover_cou;
+
+	pT_SPP_BILL = (stGetAliOverFlowData_Resp*)malloc(sizeof(stGetAliOverFlowData_Resp) * record_cou);
+	memset(pT_SPP_BILL,0,sizeof(stGetAliOverFlowData_Resp) * record_cou);
+
+
+	EXEC SQL PREPARE s FROM str_sql; 
+	EXEC SQL DECLARE c_aliover CURSOR FOR s ;
+
+	EXEC SQL OPEN c_aliover;
+	int index = 0;
+	do
+	{
+		EXEC SQL FETCH c_aliover INTO :S_PT_GET_ALIOVERFLOW_DATA.transaction_id, :S_PT_GET_ALIOVERFLOW_DATA.order_no, 
+		:S_PT_GET_ALIOVERFLOW_DATA.order_status,:S_PT_GET_ALIOVERFLOW_DATA.pay_time,:S_PT_GET_ALIOVERFLOW_DATA.refund_no;  
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+		memcpy( pT_SPP_BILL + index, &S_PT_GET_ALIOVERFLOW_DATA, sizeof(S_PT_GET_ALIOVERFLOW_DATA) );
+		index++;
+	} while ( 1 );
+    
+	EXEC SQL CLOSE c_aliover;
+    EXEC SQL DISCONNECT CURRENT;
+	*_count = index;
+    return sqlca.sqlcode;
+}
+
+int spp_bill_getrecord_count(int i_cmd, T_STSYBASE_IN_PARAM* in_param,char* count_sql,int* _count)
+{
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[32];
+	char    c_DbPass[32];
+	char    c_DbServer[32];
+	char    c_DbName[32];
+	int     record_cou;
+	char    c_count_sql[2048];
+    EXEC SQL END DECLARE SECTION;
+    
+    //错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+	strcpy(c_count_sql,count_sql);
+	
+	//开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	EXEC SQL PREPARE cou FROM :c_count_sql; 
+	EXEC SQL DECLARE c_aliover_cou CURSOR FOR cou ;
+	EXEC SQL OPEN c_aliover_cou;
+	do
+	{
+		EXEC SQL FETCH c_aliover_cou INTO :record_cou;
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	break;
+		}
+	} while(1);
+	EXEC SQL CLOSE c_aliover_cou;
+	EXEC SQL DISCONNECT CURRENT;
+	*_count = record_cou;
+	
+	return sqlca.sqlcode; 
+}
+
+int  spp_bill_GetWXOverFlowData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetWXOverFlowData_Resp *pT_SPP_BILL,char* str_sql,int count)
+{
+	printf( "[%s:%d] spp_bill_GetWXOverFlowData.\n", __FILE__, __LINE__ );
+	//声明宿主变量
+    EXEC SQL BEGIN DECLARE SECTION;
+    EXEC SQL INCLUDE "spp_query_1.sqh";
+    char    c_DbUser[32];
+	char    c_DbPass[32];
+	char    c_DbServer[32];
+	char    c_DbName[32];
+	char    c_str_sql[2048];
+    EXEC SQL END DECLARE SECTION;
+    
+	FILE *fp;
+	fp = fopen("wxoverflow_log.txt","a");
+	fprintf(fp,"[%s:%d] spp_bill_Insert_Update.\n", __FILE__, __LINE__ );
+    
+    
+	//错误处理
+    EXEC SQL WHENEVER SQLERROR CALL error_handler();
+    EXEC SQL WHENEVER SQLWARNING CALL warning_handler();
+    EXEC SQL WHENEVER NOT FOUND CONTINUE;
+ 
+	//用于存放内部数据的结构体
+    memset( &S_PT_GET_ALIOVERFLOW_DATA, 0x00, sizeof(S_PT_GET_ALIOVERFLOW_DATA) );
+    memset( &S_PT_STSYBASE_IN_PARAM, 0x00, sizeof(S_PT_STSYBASE_IN_PARAM) );
+    memcpy( &S_PT_STSYBASE_IN_PARAM, in_param, sizeof(S_PT_STSYBASE_IN_PARAM) );
+
+    //服务器的配置信息
+    strcpy( c_DbUser, in_param->user );
+    strcpy( c_DbPass, in_param->pwd );
+    strcpy( c_DbServer, in_param->host );
+	strcpy( c_DbName,in_param->dbname);
+	strcpy(c_str_sql,str_sql);
+
+	printf(">>>>>>>> str_sql = %s\n",str_sql);
+
+	//开始建立数据库连接
+    EXEC SQL CONNECT :c_DbUser IDENTIFIED BY :c_DbPass using :c_DbServer;
+    printf( "[%s:%d] spp_bill_GetWXOverFlowData.\n", __FILE__, __LINE__ );
+
+    //选择库表
+    EXEC SQL USE :c_DbName;
+
+	//pT_SPP_BILL = (stGetWXOverFlowData_Resp*)malloc(sizeof(stGetWXOverFlowData_Resp) * count);
+	//memset(pT_SPP_BILL,0,sizeof(stGetWXOverFlowData_Resp) * count);
+
+
+	EXEC SQL PREPARE s FROM :c_str_sql; 
+	EXEC SQL DECLARE c_wxover CURSOR FOR s ;
+
+	EXEC SQL OPEN c_wxover;
+	int index = 0;
+	do
+	{
+		EXEC SQL FETCH c_wxover INTO :S_PT_GET_WXOVERFLOW_DATA.pay_time,:S_PT_GET_WXOVERFLOW_DATA.transaction_id, 
+		:S_PT_GET_WXOVERFLOW_DATA.order_no,:S_PT_GET_WXOVERFLOW_DATA.trade_type, :S_PT_GET_WXOVERFLOW_DATA.order_status,
+		:S_PT_GET_WXOVERFLOW_DATA.refund_id, :S_PT_GET_WXOVERFLOW_DATA.refund_no;  
+		if( sqlca.sqlcode != 0 )
+		{
+        	printf( "sqlca.sqlcode=[%d]\n", sqlca.sqlcode );
+        	fprintf(fp,"22sqlca.sqlcode=[%d]\n", sqlca.sqlcode);
+        	break;
+		}
+		fprintf(fp,"pay_time=%s,transaction_id=%s,order_no=%s",
+		S_PT_GET_WXOVERFLOW_DATA.pay_time,S_PT_GET_WXOVERFLOW_DATA.transaction_id,S_PT_GET_WXOVERFLOW_DATA.order_no);
+		memcpy( pT_SPP_BILL + index, &S_PT_GET_WXOVERFLOW_DATA, sizeof(S_PT_GET_WXOVERFLOW_DATA) );
+		index++;
+	} while ( 1 );
+	
+	fprintf(fp,">>>>>>>> index= %d\n",index);
+	
+	fclose(fp);
+    
+	EXEC SQL CLOSE c_wxover;
+    EXEC SQL DISCONNECT CURRENT;
+    return sqlca.sqlcode;
+}
+
+
+//初始化
+void spp_query_wx_list_init( char* user,char* pwd,char* host )
+{
+	//memset( pt_spp_query, 0x00, sizeof(pt_spp_query) );
+	//服务器的配置信息
+    //strcpy( c_DbUser, user );
+    //strcpy( c_DbPass, pwd );
+    //strcpy( c_DbServer, host );
+	//printf("spp_query_wx_list_init success\n");
+}
+
+//日志打印功能：待实现
+//void spp_query_1_log( int i_cmd, const T_SPP_QUERY_WX *pt_spp_query_1 )
+//{
+
+//}
+
+
+/*
+** void error_handler()
+** 
+**  Displays error codes and numbers from the SQLCA and exits with
+**  an ERREXIT status. 
+*/
+void error_handler(void)
+{
+    fprintf(stderr, "\n** SQLCODE=(%ld)", sqlca.sqlcode);
+ 
+    if (sqlca.sqlerrm.sqlerrml)
+    {
+        fprintf(stderr, "\n** ASE Error ");
+        fprintf(stderr, "\n** %s", sqlca.sqlerrm.sqlerrmc);
+    }
+ 
+    fprintf(stderr, "\n\n");
+ 
+    //exit(-1);
+}
+ 
+/*
+** void warning_handler()
+** 
+**  Displays warning messages.
+*/
+void warning_handler(void)
+{
+ 
+    if (sqlca.sqlwarn[1] == 'W')
+    {
+        fprintf(stderr, 
+            "\n** Data truncated.\n");
+    }
+ 
+    if (sqlca.sqlwarn[3] == 'W')
+    {
+        fprintf(stderr, 
+            "\n** Insufficient host variables to store results.\n");
+    }   
+    return;
+}

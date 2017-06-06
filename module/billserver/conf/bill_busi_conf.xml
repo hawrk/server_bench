@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+
+   <sys_cfg>
+	<!-- bank_type:bank short name; encrypt:0 no encrypt,1 des encrypt-->
+        <pay_apps bm_id="1" bank_type="FJHXB" encrypt="1" settle_notify="0" use_sftp="0">
+			<wxpay>
+			       <appid>wxdace645e0bc2c424</appid>
+                   <mch_id>1900008911</mch_id>
+				   <paysign_key>5d2b6c2a8db53831f7eda20af46e531c</paysign_key>
+				   <app_cert>../client/speedpos_bill/conf/cert/abc/apiclient_cert.pem</app_cert>
+				   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/apiclient_key.pem</app_priv_cert>
+			</wxpay>
+			<alipay>
+			       <appid>2015051100069170</appid>
+                   <pid>2088911212416201</pid>
+                   <private_key>-----BEGIN RSA PRIVATE KEY-----MIICXQIBAAKBgQCDnaAla6/21p5jxGg2KDyUh+3H67RgUzBUI3hNr+9xpUxFj4yTbO0+mkz3JlzXiIsi5i8zi/AIAK659qY4KcNOJyHrVt2WonM60cytxPs2nXxA3+CooIVoBnmFYC0XzWIqwwZ2qkDJN13Lw4WKBeoU2VoOKvAATXL10yOBSxlrVQIDAQABAoGAXWwqe8VnnueSgDCu5BpFfgzKPIlTfLgv6tlOkJ5ccSeq7wlI+HBuKmyuSxSA/ECguoH3aThghd2uKLQqIl2Kkk8RFLp7RKkua7aL8b1v3z90zy2dwxRSMLdhe56enb0UObC6kbx1jUuK+9elw138VfwbH5RMGmsQDmeP+rhtZ1UCQQDAtvDcckW//THaxLnyg4zHLmRJ8NU40iVcripUvHknU76tdr4h/mVnhR2HKvVPGVTdLyhFlAZgh1fKmZciktkTAkEArtY/HDBtG5ELgfFh7Tb7PNJUV6iDL37Mg3KNOiYwHVCX1C7NfO6sEqzDdp4cFkH/vIBUj7+2BX6nHwGB0Rde9wJBAKlcXMKvXmMCZdznxK6/M2oceCCPGSOtcw5HNYZweFy6eTlCwIdpZb6bOr7+XsVb8rvLZK35D72nU90GK89DlKcCQQCtpElftNTYOREFyHeqwh16BacQvGM2C6gQsPeEliLZKo7whF8/wkeR8JXcvCFHFdtpGsdhUVT1VhmjGLsWsDB3AkBoq90kyNrj/0SHEocgNdmX8M2EWyarQFbdwvfdZfKYg63+Z9JcbUj9U3hWfy+c4w4whhL3jWuRybo+K3vMYcqb-----END RSA PRIVATE KEY-----</private_key>
+				   <public_key></public_key>
+				   <app_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem</app_cert>
+				   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem</app_priv_cert>
+			</alipay>
+        </pay_apps>
+		<pay_apps bm_id="2" bank_type="CMC" encrypt="0" settle_notify="0" use_sftp="0">
+			<wxpay>
+			       <appid>wxdace645e0bc2c424</appid>
+                   <mch_id>1900008911</mch_id>
+				   <paysign_key>5d2b6c2a8db53831f7eda20af46e531c</paysign_key>
+				   <app_cert>../client/speedpos_bill/conf/cert/abc/apiclient_cert.pem</app_cert>
+				   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/apiclient_key.pem</app_priv_cert>
+			</wxpay>
+			<alipay>
+			       <appid>2015051100069170</appid>
+                   <pid>2088911212416201</pid>
+                   <private_key>-----BEGIN RSA PRIVATE KEY-----MIICXQIBAAKBgQCDnaAla6/21p5jxGg2KDyUh+3H67RgUzBUI3hNr+9xpUxFj4yTbO0+mkz3JlzXiIsi5i8zi/AIAK659qY4KcNOJyHrVt2WonM60cytxPs2nXxA3+CooIVoBnmFYC0XzWIqwwZ2qkDJN13Lw4WKBeoU2VoOKvAATXL10yOBSxlrVQIDAQABAoGAXWwqe8VnnueSgDCu5BpFfgzKPIlTfLgv6tlOkJ5ccSeq7wlI+HBuKmyuSxSA/ECguoH3aThghd2uKLQqIl2Kkk8RFLp7RKkua7aL8b1v3z90zy2dwxRSMLdhe56enb0UObC6kbx1jUuK+9elw138VfwbH5RMGmsQDmeP+rhtZ1UCQQDAtvDcckW//THaxLnyg4zHLmRJ8NU40iVcripUvHknU76tdr4h/mVnhR2HKvVPGVTdLyhFlAZgh1fKmZciktkTAkEArtY/HDBtG5ELgfFh7Tb7PNJUV6iDL37Mg3KNOiYwHVCX1C7NfO6sEqzDdp4cFkH/vIBUj7+2BX6nHwGB0Rde9wJBAKlcXMKvXmMCZdznxK6/M2oceCCPGSOtcw5HNYZweFy6eTlCwIdpZb6bOr7+XsVb8rvLZK35D72nU90GK89DlKcCQQCtpElftNTYOREFyHeqwh16BacQvGM2C6gQsPeEliLZKo7whF8/wkeR8JXcvCFHFdtpGsdhUVT1VhmjGLsWsDB3AkBoq90kyNrj/0SHEocgNdmX8M2EWyarQFbdwvfdZfKYg63+Z9JcbUj9U3hWfy+c4w4whhL3jWuRybo+K3vMYcqb-----END RSA PRIVATE KEY-----</private_key>
+				   <public_key></public_key>
+				   <app_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem</app_cert>
+				   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem</app_priv_cert>
+			</alipay>
+        </pay_apps>
+
+	<pay_apps bm_id="8966" bank_type="tsabc" encrypt="1" settle_notify="0" use_sftp="0">
+                        <wxpay>
+                               <appid>wxdace645e0bc2c424</appid>
+                   <mch_id>1900008911</mch_id>
+                                   <paysign_key>5d2b6c2a8db53831f7eda20af46e531c</paysign_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/apiclient_cert.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/apiclient_key.pem</app_priv_cert>
+                        </wxpay>
+                        <alipay>
+                               <appid>2015051100069170</appid>
+                   <pid>2088911212416201</pid>
+                   <private_key>-----BEGIN RSA PRIVATE KEY-----MIICXQIBAAKBgQCDnaAla6/21p5jxGg2KDyUh+3H67RgUzBUI3hNr+9xpUxFj4yTbO0+mkz3JlzXiIsi5i8zi/AIAK659qY4KcNOJyHrVt2WonM60cytxPs2nXxA3+
+CooIVoBnmFYC0XzWIqwwZ2qkDJN13Lw4WKBeoU2VoOKvAATXL10yOBSxlrVQIDAQABAoGAXWwqe8VnnueSgDCu5BpFfgzKPIlTfLgv6tlOkJ5ccSeq7wlI+HBuKmyuSxSA/ECguoH3aThghd2uKLQqIl2Kkk8RFLp7RKkua7aL8b1v3z90zy2dwxRSMLd
+he56enb0UObC6kbx1jUuK+9elw138VfwbH5RMGmsQDmeP+rhtZ1UCQQDAtvDcckW//THaxLnyg4zHLmRJ8NU40iVcripUvHknU76tdr4h/mVnhR2HKvVPGVTdLyhFlAZgh1fKmZciktkTAkEArtY/HDBtG5ELgfFh7Tb7PNJUV6iDL37Mg3KNOiYwHVCX
+1C7NfO6sEqzDdp4cFkH/vIBUj7+2BX6nHwGB0Rde9wJBAKlcXMKvXmMCZdznxK6/M2oceCCPGSOtcw5HNYZweFy6eTlCwIdpZb6bOr7+XsVb8rvLZK35D72nU90GK89DlKcCQQCtpElftNTYOREFyHeqwh16BacQvGM2C6gQsPeEliLZKo7whF8/wkeR8
+JXcvCFHFdtpGsdhUVT1VhmjGLsWsDB3AkBoq90kyNrj/0SHEocgNdmX8M2EWyarQFbdwvfdZfKYg63+Z9JcbUj9U3hWfy+c4w4whhL3jWuRybo+K3vMYcqb-----END RSA PRIVATE KEY-----</private_key>
+                                   <public_key></public_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem</app_priv_cert>
+                        </alipay>
+        </pay_apps>
+
+	<pay_apps bm_id="89564" bank_type="CMC" encrypt="1" settle_notify="0" use_sftp="0">
+                        <wxpay>
+                               <appid>wxdace645e0bc2c424</appid>
+                   <mch_id>1900008911</mch_id>
+                                   <paysign_key>5d2b6c2a8db53831f7eda20af46e531c</paysign_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/apiclient_cert.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/apiclient_key.pem</app_priv_cert>
+                        </wxpay>
+                        <alipay>
+                               <appid>2015051100069170</appid>
+                   <pid>2088911212416201</pid>
+                   <private_key>-----BEGIN RSA PRIVATE KEY-----MIICXQIBAAKBgQCDnaAla6/21p5jxGg2KDyUh+3H67RgUzBUI3hNr+9xpUxFj4yTbO0+mkz3JlzXiIsi5i8zi/AIAK659qY4KcNOJyHrVt2WonM60cytxPs2nXxA3+
+CooIVoBnmFYC0XzWIqwwZ2qkDJN13Lw4WKBeoU2VoOKvAATXL10yOBSxlrVQIDAQABAoGAXWwqe8VnnueSgDCu5BpFfgzKPIlTfLgv6tlOkJ5ccSeq7wlI+HBuKmyuSxSA/ECguoH3aThghd2uKLQqIl2Kkk8RFLp7RKkua7aL8b1v3z90zy2dwxRSMLd
+he56enb0UObC6kbx1jUuK+9elw138VfwbH5RMGmsQDmeP+rhtZ1UCQQDAtvDcckW//THaxLnyg4zHLmRJ8NU40iVcripUvHknU76tdr4h/mVnhR2HKvVPGVTdLyhFlAZgh1fKmZciktkTAkEArtY/HDBtG5ELgfFh7Tb7PNJUV6iDL37Mg3KNOiYwHVCX
+1C7NfO6sEqzDdp4cFkH/vIBUj7+2BX6nHwGB0Rde9wJBAKlcXMKvXmMCZdznxK6/M2oceCCPGSOtcw5HNYZweFy6eTlCwIdpZb6bOr7+XsVb8rvLZK35D72nU90GK89DlKcCQQCtpElftNTYOREFyHeqwh16BacQvGM2C6gQsPeEliLZKo7whF8/wkeR8
+JXcvCFHFdtpGsdhUVT1VhmjGLsWsDB3AkBoq90kyNrj/0SHEocgNdmX8M2EWyarQFbdwvfdZfKYg63+Z9JcbUj9U3hWfy+c4w4whhL3jWuRybo+K3vMYcqb-----END RSA PRIVATE KEY-----</private_key>
+                                   <public_key></public_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem</app_priv_cert>
+                        </alipay>
+        </pay_apps>
+
+	<pay_apps bm_id="155" bank_type="CMC" encrypt="1" settle_notify="0" use_sftp="0">
+
+                        <wxpay>
+                               <appid>wxdace645e0bc2c424</appid>
+                   <mch_id>1900008911</mch_id>
+                                   <paysign_key>5d2b6c2a8db53831f7eda20af46e531c</paysign_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/apiclient_cert.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/apiclient_key.pem</app_priv_cert>
+                        </wxpay>
+                        <alipay>
+                               <appid>2015051100069170</appid>
+                   <pid>2088911212416201</pid>
+                   <private_key>-----BEGIN RSA PRIVATE KEY-----MIICXQIBAAKBgQCDnaAla6/21p5jxGg2KDyUh+3H67RgUzBUI3hNr+9xpUxFj4yTbO0+mkz3JlzXiIsi5i8zi/AIAK659qY4KcNOJyHrVt2WonM60cytxPs2nXxA3+
+CooIVoBnmFYC0XzWIqwwZ2qkDJN13Lw4WKBeoU2VoOKvAATXL10yOBSxlrVQIDAQABAoGAXWwqe8VnnueSgDCu5BpFfgzKPIlTfLgv6tlOkJ5ccSeq7wlI+HBuKmyuSxSA/ECguoH3aThghd2uKLQqIl2Kkk8RFLp7RKkua7aL8b1v3z90zy2dwxRSMLd
+he56enb0UObC6kbx1jUuK+9elw138VfwbH5RMGmsQDmeP+rhtZ1UCQQDAtvDcckW//THaxLnyg4zHLmRJ8NU40iVcripUvHknU76tdr4h/mVnhR2HKvVPGVTdLyhFlAZgh1fKmZciktkTAkEArtY/HDBtG5ELgfFh7Tb7PNJUV6iDL37Mg3KNOiYwHVCX
+1C7NfO6sEqzDdp4cFkH/vIBUj7+2BX6nHwGB0Rde9wJBAKlcXMKvXmMCZdznxK6/M2oceCCPGSOtcw5HNYZweFy6eTlCwIdpZb6bOr7+XsVb8rvLZK35D72nU90GK89DlKcCQQCtpElftNTYOREFyHeqwh16BacQvGM2C6gQsPeEliLZKo7whF8/wkeR8
+JXcvCFHFdtpGsdhUVT1VhmjGLsWsDB3AkBoq90kyNrj/0SHEocgNdmX8M2EWyarQFbdwvfdZfKYg63+Z9JcbUj9U3hWfy+c4w4whhL3jWuRybo+K3vMYcqb-----END RSA PRIVATE KEY-----</private_key>
+                                   <public_key></public_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem</app_priv_cert>
+                        </alipay>
+        </pay_apps>
+        	<pay_apps bm_id="1001" bank_type="TARCB" encrypt="1" settle_notify="0" use_sftp="0">
+                        <wxpay>
+                               <appid>wxdace645e0bc2c424</appid>
+                   <mch_id>1900008911</mch_id>
+                                   <paysign_key>5d2b6c2a8db53831f7eda20af46e531c</paysign_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/apiclient_cert.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/apiclient_key.pem</app_priv_cert>
+                        </wxpay>
+                        <alipay>
+                               <appid>2015051100069170</appid>
+                   <pid>2088911212416201</pid>
+                   <private_key>-----BEGIN RSA PRIVATE KEY-----MIICXQIBAAKBgQCDnaAla6/21p5jxGg2KDyUh+3H67RgUzBUI3hNr+9xpUxFj4yTbO0+mkz3JlzXiIsi5i8zi/AIAK659qY4KcNOJyHrVt2WonM60cytxPs2nXxA3+
+CooIVoBnmFYC0XzWIqwwZ2qkDJN13Lw4WKBeoU2VoOKvAATXL10yOBSxlrVQIDAQABAoGAXWwqe8VnnueSgDCu5BpFfgzKPIlTfLgv6tlOkJ5ccSeq7wlI+HBuKmyuSxSA/ECguoH3aThghd2uKLQqIl2Kkk8RFLp7RKkua7aL8b1v3z90zy2dwxRSMLd
+he56enb0UObC6kbx1jUuK+9elw138VfwbH5RMGmsQDmeP+rhtZ1UCQQDAtvDcckW//THaxLnyg4zHLmRJ8NU40iVcripUvHknU76tdr4h/mVnhR2HKvVPGVTdLyhFlAZgh1fKmZciktkTAkEArtY/HDBtG5ELgfFh7Tb7PNJUV6iDL37Mg3KNOiYwHVCX
+1C7NfO6sEqzDdp4cFkH/vIBUj7+2BX6nHwGB0Rde9wJBAKlcXMKvXmMCZdznxK6/M2oceCCPGSOtcw5HNYZweFy6eTlCwIdpZb6bOr7+XsVb8rvLZK35D72nU90GK89DlKcCQQCtpElftNTYOREFyHeqwh16BacQvGM2C6gQsPeEliLZKo7whF8/wkeR8
+JXcvCFHFdtpGsdhUVT1VhmjGLsWsDB3AkBoq90kyNrj/0SHEocgNdmX8M2EWyarQFbdwvfdZfKYg63+Z9JcbUj9U3hWfy+c4w4whhL3jWuRybo+K3vMYcqb-----END RSA PRIVATE KEY-----</private_key>
+                                   <public_key></public_key>
+                                   <app_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem</app_cert>
+                                   <app_priv_cert>../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem</app_priv_cert>
+                        </alipay>
+        </pay_apps>
+
+    </sys_cfg>
+	
+	<!-- -->
+	<databases>
+	   <dbconfig ip="10.100.120.181" port="3306"   dbnum="1"  type="1" user="root" pwd="123456" dbname = "order_db"/>    
+          <dbconfig ip="10.100.100.84"   port="3306"   dbnum="2"  type="1" user="speedpos" pwd="speedpos@123" dbname = "order_db" /> 
+	</databases>
+	
+    <!-- 远程账单文件FTP信息 -->
+	<SftpIp>10.100.100.82</SftpIp>
+	<SftpPort>22</SftpPort>
+	<SftpUser>root</SftpUser>
+	<SftpPass>isd!@#1128</SftpPass>
+
+    <!-- 微信信息 -->
+	<WXBillPath>../client/speedpos_bill/data/bill/</WXBillSrcPath>  
+	<WXBillSrcPrefix>sys_trade_wx_bill_flow_all</WXBillSrcPrefix>
+	<WXBillEncPrefix>sys_trade_wx_bill_flow_all</WXBillEncPrefix>
+	
+	 <!-- 支付宝信息 -->
+	<ALIBillPath>../client/speedpos_bill/data/bill/</ALIBillSrcPath>  
+	<ALIBillSrcPrefix>sys_trade_ali_bill_flow_all</ALIBillSrcPrefix>
+	<ALIBillEncPrefix>sys_trade_ali_bill_flow_all</ALIBillEncPrefix>
+	
+	<!-- 商户账单文件信息 -->
+	<MchBillSrcFilePrefix>sys_trade_bill_flow_all</MchBillSrcFilePrefix>
+	<MchBillPath>../client/speedpos_bill/data/bill/</MchBillSrcPath>
+	<MchBillEncFilePrefix>sys_trade_bill_flow_all</MchBillEncFilePrefix>
+	
+	<!-- 渠道账单文件信息 -->
+	<ChannelSrcFilePrefix>sys_trade_channel_bill_flow_all</ChannelSrcFilePrefix>
+	<ChannelBillPath>../client/speedpos_bill/data/bill/</ChannelBillSrcPath>
+	<ChannelEncFilePrefix>sys_trade_channel_bill_flow_all</ChannelEncFilePrefix>
+
+        <!-- Sftp拉取文件存放信息 -->
+	<SftpLongRangPath>/usr/local/services/spp_speedpos_bill-2.0/client/speedpos_bill/conf</SftpLongRangPath>
+	<SftpBillPath>../client/speedpos_bill/data/bm/</SftpBillDecPath>
+	<SftMchBillFilePrefix>sys_trade_bill_flow_all</SftMchBillFilePrefix>
+	<SftChannelBillFilePrefix>sys_trade_channel_bill_flow_all</SftChannelBillFilePrefix>
+	<SftWXBillFilePrefix>sys_trade_wx_bill_flow_all</SftWXBillFilePrefix>
+	<SftAliBillFilePrefix>sys_trade_ali_bill_flow_all</SftAliBillFilePrefix>
+	<BillFileToDBShellPath>BillSrvFileToDB.sh</BillFileToDBShellPath>
+	<BillTruncateDBShellPath>BillTruncateDB.sh</BillTruncateDBShellPath>
+
+	<!-- 打款单信息 -->
+    <RemittancePath>../client/speedpos_bill/data/paybill/</RemittancePath>
+	<RemittanceSrcPrefix>WXZF</RemittanceSrcPrefix>
+	<RemittanceResultSrcPrefix>WXZF</RemittanceResultSrcPrefix>
+    
+        <GetBankNoApiUrl>http://betadataapi.speedpos.snsshop.net/settlesetting/getCardno</GetBankNoApiUrl>
+	<AddSettleLogUrl>http://betadataapi.speedpos.snsshop.net/settlelog/add</AddSettleLogUrl>
+	<UpdateSettleLogUrl>http://betadataapi.speedpos.snsshop.net/settlelog/update</UpdateSettleLogUrl>
+        <GetPayFailUrl>http://betadataapi.speedpos.snsshop.net/settlelog/getPayFailLists</GetPayFailUrl>
+	<AddBillContrastUrl>http://betadataapi.speedpos.snsshop.net/billcontrast/add</AddBillContrastUrl>
+	<UpdateBillContrastUrl>http://betadataapi.speedpos.snsshop.net/billcontrast/update</UpdateBillContrastUrl>
+	<AddExceptionOrderUrl>http://betadataapi.speedpos.snsshop.net/ordersproblems/add</AddExceptionOrderUrl>
+	<ApiKey>dsadfgfgfgf</ApiKey>
+        
+        <CallNotifyIp>10.100.100.88</CallNotifyIp>
+	<CallNotifyPort>13480</CallNotifyPort>
+	<!-- call settle server -->
+	<CallSettleSerIP>10.100.100.83</CallSettleSerIP>
+	<CallSettleSerPort>11188</CallSettleSerPort>
+	
+	<!-- Order DB 信息 -->
+	<OrderDBHost></OrderDBHost>
+	<OrderDBPort>3306</OrderDBPort>
+	<OrderDBUser></OrderDBUser>
+	<OrderDBPass></OrderDBPass>
+	<OrderDBNamePrifix></OrderDBNamePrifix>
+		
+	<service_name_no>110</service_name_no>
+	<service_name>盛灿科技</service_name>
+	<service_name_tag>手续费</service_name_tag>
+	<service_bank>招商银行</service_bank>  <!-- 技术服务商银行 -->
+	<service_bank_account>6225552321165546123</service_bank_account> <!-- 技术服务商银行账号 -->
+	
+	
+</root>

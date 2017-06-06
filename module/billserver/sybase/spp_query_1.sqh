@@ -1,0 +1,68 @@
+
+struct
+{
+	char user[32];
+	char pwd[32];
+	char host[32];
+	char dbname[32];
+
+} S_PT_STSYBASE_IN_PARAM;
+
+
+ struct
+{
+	char mch_id[64];
+	int sum_shop_amount;
+	int sum_channel_profit;
+	int sum_service_profit;
+	int sum_payment_profit;
+	int sum_bm_profit;
+	int sum_total_commission;
+	int sum_total_fee;
+	int count;
+} S_PT_GET_PAYBILL_DATA;
+
+
+ struct
+{
+	char mch_id[64];
+	int sum_shop_amount;
+	int sum_channel_profit;
+	int sum_service_profit;
+	int sum_payment_profit;
+	int sum_bm_profit;
+	int sum_total_commission;
+	int sum_refund_fee;
+	int count;
+} S_PT_GET_REFUNDBILL_DATA;
+
+
+ struct
+{
+	char channel_id[64];
+	int sum_channel_profit;
+	
+} S_PT_GET_CHANNELBILL_DATA;
+
+ struct
+{
+	char pay_time[32];
+	char transaction_id[64];
+	char order_no[64];
+	char trade_type[32];
+	char order_status[32];
+	char refund_id[64];
+	char refund_no[64];
+
+} S_PT_GET_WXOVERFLOW_DATA;
+
+
+ struct
+{
+	char transaction_id[64];
+	char order_no[64];
+	int  order_status;
+	unsigned int pay_time;
+	char refund_no[64];
+
+} S_PT_GET_ALIOVERFLOW_DATA;
