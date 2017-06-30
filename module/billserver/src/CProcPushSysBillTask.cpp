@@ -30,63 +30,63 @@ INT32 CProcPushSysBillTask::Execute( NameValueMap& mapInput, char** outbuf, int&
 //    string parse_str = parse.tostr();
 //    CDEBUG_LOG("parse_str = [%s]",parse_str.c_str());
     //end
+	gettimeofday(&m_stStart, NULL);
+	Reset();
 
-    gettimeofday(&m_stStart, NULL);
-    Reset();
+	if ( !m_bInited )
+	{
+		snprintf( m_szErrMsg, sizeof(m_szErrMsg), "Not Inited" );
+		m_iRetCode = -1;
+		return m_iRetCode;
+	}
 
-    if ( !m_bInited )
-    {
-        snprintf( m_szErrMsg, sizeof(m_szErrMsg), "Not Inited" );
-        m_iRetCode = -1;
-        return m_iRetCode;
-    }
+	//获取请求
+	iRet = FillReq(mapInput);
+	if ( iRet != 0 )
+	{
+		m_iRetCode = iRet;
+		BuildResp(outbuf, outlen);
+		return m_iRetCode;
+	}
 
-    //获取请求
-    iRet = FillReq(mapInput);
-    if ( iRet != 0 )
-    {
-        m_iRetCode = iRet;
-        BuildResp(outbuf, outlen);
-        return m_iRetCode;
-    }
+	//校验请求
+	iRet = CheckInput();
+	if ( iRet != 0 )
+	{
+		snprintf( m_szErrMsg, sizeof(m_szErrMsg),
+				  "CProcPushSysBillTask::Execute CheckInput Failed.Ret[%d]", iRet );
+		m_iRetCode = iRet;
+		BuildResp(outbuf, outlen);
+		return m_iRetCode;
+	}
 
-    //校验请求
-    iRet = CheckInput();
-    if ( iRet != 0 )
-    {
-        snprintf( m_szErrMsg, sizeof(m_szErrMsg),
-                  "CProcPushSysBillTask::Execute CheckInput Failed.Ret[%d]", iRet );
-        m_iRetCode = iRet;
-        BuildResp(outbuf, outlen);
-        return m_iRetCode;
-    }
-
-    try
-    {
-    	iRet = HandleProcess();
-    }
-    catch(CTrsExp& e)
-    {
+	try
+	{
+		iRet = HandleProcess();
+	}
+	catch(CTrsExp& e)
+	{
 		m_stResp.err_code = atoi(e.retcode.c_str());
 		m_stResp.err_msg = e.retmsg;
 		BuildResp(outbuf, outlen);
 		CDEBUG_LOG("------------exception process end----------");
 		return m_stResp.err_code;
-    }
-    catch(...)
-    {
+	}
+	catch(...)
+	{
 		m_stResp.err_code = -1;
 		m_stResp.err_msg = "Unknown Exception";
 		BuildResp(outbuf, outlen);
 		CDEBUG_LOG("------------exception process end----------");
 		return m_stResp.err_code;
-    }
+	}
 
 	m_stResp.err_code = 0;
 	m_stResp.err_msg = RESP_SUCCUSS_MSG;
-    BuildResp( outbuf, outlen );
-    CDEBUG_LOG("------------process end----------");
-    return m_iRetCode;
+	BuildResp( outbuf, outlen );
+	CDEBUG_LOG("------------process end----------");
+	return m_iRetCode;
+
 }
 
 /**
@@ -499,13 +499,14 @@ INT32 CProcPushSysBillTask::CreateSysPaymentBillFill(clib_mysql* pDbCon,
 	{
 
 		memset(szLinBuf, 0x0, sizeof(szLinBuf));
-		snprintf(szLinBuf, sizeof(szLinBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
+		snprintf(szLinBuf, sizeof(szLinBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
 			"`%s,`%s,`%d,`%d,`%d,`%d,`%s,"
-			"`%s,`%s,`%d,`%d,`%d,`%d,`%d",
-			getSysTime(itOrder->pay_time).c_str(), itOrder->order_no.c_str(), itOrder->out_trade_no.c_str(),
+			"`%s,`%s,`%d,`%d,`%d,`%d,`%d,`%s,`%s,`%d",
+			m_stReq.sBmId.c_str(),getSysTime(itOrder->pay_time).c_str(), itOrder->order_no.c_str(), itOrder->out_trade_no.c_str(),
 			itOrder->transaction_id.c_str(), itOrder->mch_id.c_str(), itOrder->channel_id.c_str(), itOrder->pay_channel.c_str(),
 			itOrder->trade_type.c_str(), "SUCCESS", itOrder->total_fee, itOrder->total_commission, itOrder->shop_amount, 0, "",
-			"", "", itOrder->payment_profit, itOrder->channel_profit, itOrder->bm_profit, itOrder->service_profit,0);
+			"", "", itOrder->payment_profit, itOrder->channel_profit, itOrder->bm_profit, itOrder->service_profit,0,
+			itOrder->fee_type.c_str(),itOrder->sub_body.c_str(),itOrder->shop_calc_rate);
 		//生成支付交易对账单
 		//CDEBUG_LOG("order order_no[%s] szBuf[%s]!", itOrder->order_no.c_str(), szLinBuf);
 		pBillShopFile->raw("%s\n", szLinBuf);//所有商户的
@@ -532,9 +533,9 @@ INT32 CProcPushSysBillTask::CreateSysPaymentBillFill(clib_mysql* pDbCon,
 		for (size_t i = 0; i < vecOrderChannelFlowDatas.size(); ++i)
 		{
 			memset(szChBuf, 0x0, sizeof(szChBuf));
-			snprintf(szChBuf, sizeof(szChBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
+			snprintf(szChBuf, sizeof(szChBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
 				"`%d,`%d,`%s,`%d,`%d",
-				getSysTime(vecOrderChannelFlowDatas[i].pay_time).c_str(), vecOrderChannelFlowDatas[i].order_no.c_str(), vecOrderChannelFlowDatas[i].mch_id.c_str(), vecOrderChannelFlowDatas[i].channel_id.c_str(), itOrder->pay_channel.c_str(), itOrder->trade_type.c_str(), "SUCCESS",
+				m_stReq.sBmId.c_str(),getSysTime(vecOrderChannelFlowDatas[i].pay_time).c_str(), vecOrderChannelFlowDatas[i].order_no.c_str(), vecOrderChannelFlowDatas[i].mch_id.c_str(), vecOrderChannelFlowDatas[i].channel_id.c_str(), itOrder->pay_channel.c_str(), itOrder->trade_type.c_str(), "SUCCESS",
 				vecOrderChannelFlowDatas[i].total_fee, 0, "", vecOrderChannelFlowDatas[i].channel_profit_rate, vecOrderChannelFlowDatas[i].channel_profit);
 			//CDEBUG_LOG("orderchannel order_no[%s] szOrderChBuf[%s]!", itOrder->order_no.c_str(), szLinBuf);
 			pBillChannelFile->raw("%s\n", szChBuf);//商户所属渠道的
@@ -575,13 +576,14 @@ INT32 CProcPushSysBillTask::PushSysRefundBill()
 	for (std::vector<OrderRefundFlowData>::iterator itRefund = vecOrderRefundFlowDatas.begin(); itRefund != vecOrderRefundFlowDatas.end(); ++itRefund)
 	{
 		memset(szLinBuf, 0x0, sizeof(szLinBuf));
-		snprintf(szLinBuf, sizeof(szLinBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
+		snprintf(szLinBuf, sizeof(szLinBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
 			"`%s,`%s,`%d,`%d,`%d,`%d,`%s,"
-			"`%s,`%s,`%d,`%d,`%d,`%d,`%d",
-			getSysTime(itRefund->refund_time).c_str(), itRefund->order_no.c_str(), "", "", itRefund->mch_id.c_str(), itRefund->channel_id.c_str(),
+			"`%s,`%s,`%d,`%d,`%d,`%d,`%d,`%s,`%s,`%d",
+			m_stReq.sBmId.c_str(),getSysTime(itRefund->refund_time).c_str(), itRefund->order_no.c_str(), "", "", itRefund->mch_id.c_str(), itRefund->channel_id.c_str(),
 			itRefund->pay_channel.c_str(),itRefund->trade_type.c_str(), "REFUND", itRefund->total_fee, itRefund->refund_total_commission,
 			itRefund->refund_shop_amount, itRefund->refund_fee, itRefund->refund_no.c_str(),itRefund->out_refund_no.c_str(),itRefund->refund_id.c_str(),
-			itRefund->refund_payment_profit, itRefund->refund_channel_profit, itRefund->refund_bm_profit, itRefund->refund_service_profit,0);
+			itRefund->refund_payment_profit, itRefund->refund_channel_profit, itRefund->refund_bm_profit, itRefund->refund_service_profit,0,
+			itRefund->fee_type.c_str(),itRefund->sub_body.c_str(),itRefund->shop_calc_rate);
 
 		//CDEBUG_LOG("refund order_no[%s] refund_no[%s] szLinBuf[%s]!", itRefund->order_no.c_str(), itRefund->refund_no.c_str(), szLinBuf);
 		pBillShopFile->raw("%s\n", szLinBuf);
@@ -603,9 +605,9 @@ INT32 CProcPushSysBillTask::PushSysRefundBill()
 		}
 		for (size_t i = 0; i < vecOrderRefundChannelDatas.size(); ++i)
 		{
-			snprintf(szChBuf, sizeof(szChBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
+			snprintf(szChBuf, sizeof(szChBuf), "`%s,`%s,`%s,`%s,`%s,`%s,`%s,`%s,"
 				"`%d,`%d,`%s,`%d,`%d",
-				getSysTime(vecOrderRefundChannelDatas[i].refund_time).c_str(), itRefund->order_no.c_str(), vecOrderRefundChannelDatas[i].mch_id.c_str(), vecOrderRefundChannelDatas[i].channel_id.c_str(), itRefund->pay_channel.c_str(), itRefund->trade_type.c_str(), "REFUND",
+				m_stReq.sBmId.c_str(),getSysTime(vecOrderRefundChannelDatas[i].refund_time).c_str(), itRefund->order_no.c_str(), vecOrderRefundChannelDatas[i].mch_id.c_str(), vecOrderRefundChannelDatas[i].channel_id.c_str(), itRefund->pay_channel.c_str(), itRefund->trade_type.c_str(), "REFUND",
 				0, vecOrderRefundChannelDatas[i].refund_fee, vecOrderRefundChannelDatas[i].refund_no.c_str(), 0, vecOrderRefundChannelDatas[i].refund_channel_profit);
 			//CDEBUG_LOG("refundchannel order_no[%s] refund_no[%s] szLinBuf[%s]!", itRefund->order_no.c_str(), vecOrderRefundChannelDatas[i].refund_no.c_str(), szChBuf);
 			pBillChannelFile->raw("%s\n", szChBuf);//商户所属渠道的
@@ -771,7 +773,6 @@ int CProcPushSysBillTask::PushAliBill(std::string& strPath, std::string& details
 	system(szToBuf);
 	return 0;
 }
-
 
 void CProcPushSysBillTask::BuildResp( CHAR** outbuf, INT32& outlen )
 {

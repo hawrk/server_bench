@@ -14,6 +14,8 @@ RAPIDJSON_ROOT=../../Base/third_party/rapidjson
 URI_ROOT=../../Base/third_party/network-uri
 BOOST_ROOT=../../Base/third_party/boost
 SSH2_ROOT=/usr/local/services/ssh
+AMQP=./amqp
+RABBITMQ_ROOT=../../Base/third_party/rabbitmq
 
 ########## compiler flags ##########
 INCS		:= -I./ -I../business -I$(INC_HOME) -I$(INC_HOME)/xml/  -I$(BASE_COMM)\
@@ -27,6 +29,8 @@ INCS		:= -I./ -I../business -I$(INC_HOME) -I$(INC_HOME)/xml/  -I$(BASE_COMM)\
            
 DEFS		:= -D_GNU_SOURCE -D_REENTRANT -D_OS_LINUX_ -D_COMPILER_CUR_=_COMPILER_GNU_GCC_4_1_2_  -D_NO_COMPILE_POLICY_MESSAGE_
 
+LIBS		:= -L$(RABBITMQ_ROOT)/lib -lrabbitmq\
+
 CC			:= gcc
 CFLAGS		:= -pipe  -O2 -Wall $(INCS) $(DEFS) -fPIC
 CXX			:= g++
@@ -36,7 +40,7 @@ AR = ar -rv
 LIB_COMM_OBJS = $(patsubst ./%.cpp, ./%.o, $(wildcard ./*.cpp))
 
 %.o : %.c
-	$(CC) -c $(CFLAGS)  -o $@ $<
+	$(CC) -c $(CFLAGS)  -o $@ $< $(LIBS)
 	
 %.o : %.cpp
 	$(CXX) -c $(CXXFLAGS)  -o $@ $<

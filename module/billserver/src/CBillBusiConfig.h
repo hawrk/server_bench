@@ -10,7 +10,8 @@
 #include <vector>
 #include <errno.h>
 #include "../business/bill_protocol.h"
-
+#include "../../Base/Comm/comm_protocol.h"
+#include "url_protocol.h"
 
 class CBillBusiConfig
 {
@@ -59,6 +60,8 @@ public:
    
 	std::vector<DbCfg>  dbCfgVec;
 
+	std::vector<DbCfg>  apay_dbCfgVec;
+
 	std::map<std::string,BankAttr> bak_attr;
 
 	std::map<std::string, WxPayCfg> wx_pay_cfgs;
@@ -66,6 +69,8 @@ public:
 	std::map<std::string, AliPayCfg> ali_pay_cfgs;
 
 	STBillSrvMainConf mainConfig;
+
+	ApayBillSrvMainConf apayMainConf;
 
 public:
 	//function definition
@@ -76,6 +81,7 @@ public:
 	const AliPayCfg* GetAliPayCfg(std::string bm_id) const;
 	const BankAttr* GetBankAttrCfg(std::string bm_id) const;
 
+    void ReadErrCodeFromFile(NameValueMap& inMap);
 private:
-    
+    string m_ApayErrFile;    
 };

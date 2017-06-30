@@ -14,6 +14,7 @@
 #include "CBillConstrastABC.h"
 #else
 #include "CBillConstrastCommon.h"
+#include "CBillConstrastSPDB.h"
 #endif
 #include "CBillConstrastBase.h"
 

@@ -30,8 +30,19 @@ CBillContrastCommon::~CBillContrastCommon()
 
 void CBillContrastCommon::BillFileDownLoad(ProPullBillReq& m_stReq,int starttime)
 {
-	//Copy2GetFile(m_stReq,starttime);
-	SFTPDownLoad(m_stReq,starttime);
+	//
+	int iRet;
+	//同步对账步骤
+	iRet = g_cOrderServer.CallUpdateBillContrastApi(m_stReq.sBmId, m_stReq.sPayChannel, toDate(getSysDate(starttime)), BILL_CONTRAST_STEP_BEGIN_SFTP_DOWNLOAD,
+													stepMap[BILL_CONTRAST_STEP_BEGIN_SFTP_DOWNLOAD]);
+	if (iRet < 0)
+	{
+		CERROR_LOG("CallAddBillContrastApi failed!iRet =[%d]", iRet);
+		throw(CTrsExp(ERR_ORDER_NO_MAPPING_EXIST,errMap[ERR_ORDER_NO_MAPPING_EXIST]));
+	}
+
+	Copy2GetFile(m_stReq,starttime);
+	//SFTPDownLoad(m_stReq,starttime);
 }
 
 void CBillContrastCommon::LoadBillFlowToDB(ProPullBillReq& m_stReq,int starttime)
@@ -39,6 +50,31 @@ void CBillContrastCommon::LoadBillFlowToDB(ProPullBillReq& m_stReq,int starttime
 	BEGIN_LOG(__func__);
 	CDEBUG_LOG("LoadBillFlowToDB begin");
 	INT32 iRet = 0;
+
+	//校验对账文件是否已下载
+	if(access(sShopBillSrcFileName.c_str(),F_OK) != 0
+			||access(sChannelBillSrcFileName.c_str(),F_OK) != 0)
+	{
+		CERROR_LOG("download file not exist!!");
+		throw(CTrsExp(ERR_DETAIL_FILE_NOT_FOUND,errMap[ERR_DETAIL_FILE_NOT_FOUND]));
+	}
+	if(m_stReq.sPayChannel == WX_API_PAY_CHANNEL)
+	{
+		if(access(sWxBillSrcFileName.c_str(),F_OK) != 0)
+		{
+			CERROR_LOG("wx bill file not exist!!");
+			throw(CTrsExp(ERR_DETAIL_FILE_NOT_FOUND,"wx bill file not exist!!"));
+		}
+	}
+	if(m_stReq.sPayChannel == ALI_API_PAY_CHANNEL)
+	{
+		if(access(sAliBillSrcFileName.c_str(),F_OK) != 0)
+		{
+			CERROR_LOG("ali bill file not exist!!");
+			throw(CTrsExp(ERR_DETAIL_FILE_NOT_FOUND,"ali bill file not exist!!"));
+		}
+	}
+
 	//同步对账步骤
 	//TODO
 	iRet = g_cOrderServer.CallUpdateBillContrastApi(m_stReq.sBmId, m_stReq.sPayChannel, toDate(getSysDate(starttime)), BILL_CONTRAST_STEP_BEGIN_LOAD_BILL_FLOW,
@@ -50,6 +86,48 @@ void CBillContrastCommon::LoadBillFlowToDB(ProPullBillReq& m_stReq,int starttime
 	}
 	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
 	std::string strDbName = Singleton<CSpeedPosConfig>::GetInstance()->GetBillDbName();
+
+
+	//清表
+	iRet = m_stTransFlowDao.TruncateEveryPaymentTypeSysFlowData(*pBillDb,m_stReq.sBmId,m_stReq.sPayChannel);
+	if(iRet < 0)
+	{
+		CERROR_LOG("Truncate Table Fail!!!");
+		throw(CTrsExp(SYSTEM_ERR,"Truncate Table Fail!!!"));
+	}
+
+	std::string sPath = mainConfig.sSftpShellPath;
+
+	char szLoadOrderFlowCmd[512] = { 0 };
+	snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s %d %s %s %s %s %s",
+		sPath.c_str(), mainConfig.sBillTruncateDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(),sShopBillSrcFileName.c_str(),ORDER_ALL_FLOW);
+	CDEBUG_LOG("szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
+	system(szLoadOrderFlowCmd);
+
+	memset(szLoadOrderFlowCmd,0x00,sizeof(szLoadOrderFlowCmd));
+	snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s %d %s %s %s %s %s",
+		sPath.c_str(), mainConfig.sBillTruncateDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(),sChannelBillSrcFileName.c_str(),ORDER_CHANNEL_FLOW);
+	system(szLoadOrderFlowCmd);
+
+	if (0 == strcmp(m_stReq.sPayChannel.c_str(), WX_API_PAY_CHANNEL))
+	{
+		memset(szLoadOrderFlowCmd,0x00,sizeof(szLoadOrderFlowCmd));
+		snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s %d %s %s %s %s %s",
+			sPath.c_str(), mainConfig.sBillTruncateDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+			pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(),sWxBillSrcFileName.c_str(),BILL_WXPAY_FLOW);
+		system(szLoadOrderFlowCmd);
+	}
+
+	if (0 == strcmp(m_stReq.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
+	{
+		memset(szLoadOrderFlowCmd,0x00,sizeof(szLoadOrderFlowCmd));
+		snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s %d %s %s %s %s %s",
+			sPath.c_str(), mainConfig.sBillTruncateDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+			pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(),sAliBillSrcFileName.c_str(),BILL_ALIPAY_FLOW);
+		system(szLoadOrderFlowCmd);
+	}
 	//char* path_end;
 //	char dir[256] = { 0 };
 //	//int n = readlink("/proc/self/exe", dir, 256);
@@ -57,43 +135,43 @@ void CBillContrastCommon::LoadBillFlowToDB(ProPullBillReq& m_stReq,int starttime
 //	std::string sDir = dir;
 //	int nLen = sDir.rfind('/');
 //	std::string sPath = sDir.substr(0, nLen + 1);
-	std::string sPath = mainConfig.sSftpShellPath;
-	CDEBUG_LOG("sPath : [%s] \n", sPath.c_str());
-
-	char szLoadOrderFlowCmd[512] = { 0 };
-	snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s %d %s %s %s %s t_order_all_flow_%s shop",
-		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
-		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(),sShopBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
-	CDEBUG_LOG("szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
-
-	char szLoadWxFlowCmd[512] = { 0 };
-	snprintf(szLoadWxFlowCmd, sizeof(szLoadWxFlowCmd), "sh %s%s %s %d %s %s %s %s t_wxpay_flow_%s wx",
-		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
-		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(), sWxBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
-	CDEBUG_LOG("LoadWxFlowCmd:[%s] \n", szLoadWxFlowCmd);
-
-	char szLoadOrderChannelFlowCmd[512] = { 0 };
-	snprintf(szLoadOrderChannelFlowCmd, sizeof(szLoadOrderChannelFlowCmd), "sh %s%s %s %d %s %s %s %s t_order_channel_all_flow_%s channel",
-		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
-		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(), sChannelBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
-	CDEBUG_LOG("LoadOrderChannelFlowCmd:[%s] \n", szLoadOrderChannelFlowCmd);
-
-	char szLoadAliFlowCmd[512] = { 0 };
-	snprintf(szLoadAliFlowCmd, sizeof(szLoadAliFlowCmd), "sh %s%s %s %d %s %s %s %s t_alipay_flow_%s ali",
-		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
-		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(), sAliBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
-	CDEBUG_LOG("szLoadAliFlowCmd:[%s] \n", szLoadAliFlowCmd);
-
-	system(szLoadOrderFlowCmd);
-	system(szLoadOrderChannelFlowCmd);
-	if (0 == strcmp(m_stReq.sPayChannel.c_str(), WX_API_PAY_CHANNEL))
-	{
-		system(szLoadWxFlowCmd);
-	}
-	if (0 == strcmp(m_stReq.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
-	{
-		system(szLoadAliFlowCmd);
-	}
+//	std::string sPath = mainConfig.sSftpShellPath;
+//	CDEBUG_LOG("sPath : [%s] \n", sPath.c_str());
+//
+//	char szLoadOrderFlowCmd[512] = { 0 };
+//	snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s %d %s %s %s %s t_order_all_flow shop",
+//		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+//		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(),sShopBillSrcFileName.c_str());
+//	CDEBUG_LOG("szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
+//
+//	char szLoadWxFlowCmd[512] = { 0 };
+//	snprintf(szLoadWxFlowCmd, sizeof(szLoadWxFlowCmd), "sh %s%s %s %d %s %s %s %s t_wxpay_flow wx %s",
+//		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+//		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(), sWxBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
+//	CDEBUG_LOG("LoadWxFlowCmd:[%s] \n", szLoadWxFlowCmd);
+//
+//	char szLoadOrderChannelFlowCmd[512] = { 0 };
+//	snprintf(szLoadOrderChannelFlowCmd, sizeof(szLoadOrderChannelFlowCmd), "sh %s%s %s %d %s %s %s %s t_order_channel_all_flow channel",
+//		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+//		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(), sChannelBillSrcFileName.c_str());
+//	CDEBUG_LOG("LoadOrderChannelFlowCmd:[%s] \n", szLoadOrderChannelFlowCmd);
+//
+//	char szLoadAliFlowCmd[512] = { 0 };
+//	snprintf(szLoadAliFlowCmd, sizeof(szLoadAliFlowCmd), "sh %s%s %s %d %s %s %s %s t_alipay_flow ali %s",
+//		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), pBillDb->ms_host, pBillDb->mi_port,
+//		pBillDb->ms_user, pBillDb->ms_pass, strDbName.c_str(), sAliBillSrcFileName.c_str(),m_stReq.sBmId.c_str());
+//	CDEBUG_LOG("szLoadAliFlowCmd:[%s] \n", szLoadAliFlowCmd);
+//
+//	system(szLoadOrderFlowCmd);
+//	system(szLoadOrderChannelFlowCmd);
+//	if (0 == strcmp(m_stReq.sPayChannel.c_str(), WX_API_PAY_CHANNEL))
+//	{
+//		system(szLoadWxFlowCmd);
+//	}
+//	if (0 == strcmp(m_stReq.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
+//	{
+//		system(szLoadAliFlowCmd);
+//	}
 }
 
 void CBillContrastCommon::GetRemitBillData(ProPullBillReq& m_stReq,int starttime,int endtime)
@@ -104,7 +182,7 @@ void CBillContrastCommon::GetRemitBillData(ProPullBillReq& m_stReq,int starttime
 	std::string sEndTime = getSysTime(endtime);
 
 	iRet = m_stTransFlowDao.GetPayBillData(*pBillDb,
-			m_stReq.sBmId,
+			m_stReq.sBmId,m_stReq.sPayChannel,
 		sBeginTime,
 		sEndTime,
 		orderPayBillMap);
@@ -116,7 +194,7 @@ void CBillContrastCommon::GetRemitBillData(ProPullBillReq& m_stReq,int starttime
 
 
 	iRet = m_stTransFlowDao.GetRefundBillData(*pBillDb,
-			m_stReq.sBmId,
+			m_stReq.sBmId,m_stReq.sPayChannel,
 		sBeginTime,
 		sEndTime,
 		orderRefundBillMap);
@@ -132,16 +210,17 @@ void CBillContrastCommon::GetRemitBillData(ProPullBillReq& m_stReq,int starttime
 
 	if (m_stReq.sPayChannel == WX_API_PAY_CHANNEL)
 	{
-		strTableFix = "t_order_channel_wxpay_flow_" + m_stReq.sBmId;
+		strTableFix = "t_order_channel_wxpay_flow";
 	}
 	else if (m_stReq.sPayChannel == ALI_API_PAY_CHANNEL)
 	{
-		strTableFix = "t_order_channel_alipay_flow_" + m_stReq.sBmId;
+		strTableFix = "t_order_channel_alipay_flow";
 	}
 
 	iRet = m_stTransFlowDao.GetChannelBillData(*pBillDb,
 		strTableFix,
 		m_stReq.sBmId,
+		m_stReq.sPayChannel,
 		sBeginTime,
 		sEndTime,
 		"SUCCESS",
@@ -156,6 +235,7 @@ void CBillContrastCommon::GetRemitBillData(ProPullBillReq& m_stReq,int starttime
 	iRet = m_stTransFlowDao.GetChannelBillData(*pBillDb,
 		strTableFix,
 		m_stReq.sBmId,
+		m_stReq.sPayChannel,
 		sBeginTime,
 		sEndTime,
 		"REFUND",
@@ -185,10 +265,6 @@ void CBillContrastCommon::ProcBillComparison(ProPullBillReq& m_stReq,int startti
 	std::string sEndTime = getSysTime(endtime);
 	//CDEBUG_LOG("ProcBillComparison: BeginTime[%s] EndTime[%s]\n", sBeginTime.c_str(), sEndTime.c_str());
 	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
-
-	//清表
-	iRet = m_stTransFlowDao.TruncateEveryPaymentTypeSysFlowData(*pBillDb,m_stReq.sBmId);
-
 
 	/**-----------分离微信pay和支付宝支付订单流水------------*/
 	if (0 == strcmp(m_stReq.sPayChannel.c_str(), WX_API_PAY_CHANNEL))
@@ -446,6 +522,28 @@ void CBillContrastCommon::UpdateBillStatus(ProPullBillReq& m_stReq,int starttime
 			throw(CTrsExp(ERR_UPDATE_BILL_STATUS,errMap[ERR_UPDATE_BILL_STATUS]));
 		}
 	}
+}
+
+void CBillContrastCommon::InitBillFileDownLoad(ProPullBillReq& m_Req,int starttime)
+{
+	//初始化对账步骤
+	int iRet;
+	iRet = g_cOrderServer.CallAddBillContrastApi(m_Req.sBmId, m_Req.sPayChannel, toDate(getSysDate(starttime)),
+				BILL_CONTRAST_STEP_BEGIN_ING,
+				stepMap[BILL_CONTRAST_STEP_BEGIN_ING]);
+	if (iRet < 0)
+	{
+		CERROR_LOG("CallAddBillContrastApi failed!iRet =[%d]", iRet);
+		throw(CTrsExp(ERR_UPDATE_BILL_STATUS,errMap[ERR_UPDATE_BILL_STATUS]));
+
+	}
+
+}
+
+void CBillContrastCommon::ProcException(ProPullBillReq& m_stReq,int starttime,int exce_type)
+{
+	g_cOrderServer.CallUpdateBillContrastApi(m_stReq.sBmId, m_stReq.sPayChannel, getSysDate(starttime),
+		0, "", -1);
 }
 
 

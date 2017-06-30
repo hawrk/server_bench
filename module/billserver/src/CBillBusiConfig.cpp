@@ -63,10 +63,42 @@ CBillBusiConfig::CBillBusiConfig(const char* szFileName)
 				dbCfgVec.push_back(dbCfg);
 			}
 		}
+
+		BOOST_FOREACH(ptree::value_type& v, pt.get_child("root.apay_databases"))
+		{
+			if (v.first == "dbconfig")
+			{
+				DbCfg dbCfg; 
+				
+				dbCfg.host = v.second.get<std::string>("<xmlattr>.ip");
+				dbCfg.port = v.second.get<int>("<xmlattr>.port");
+				dbCfg.user = v.second.get<std::string>("<xmlattr>.user");
+				dbCfg.pswd = v.second.get<std::string>("<xmlattr>.pwd");
+				dbCfg.db_name = v.second.get<std::string>("<xmlattr>.dbname");
+				dbCfg.db_num = v.second.get<int>("<xmlattr>.dbnum");
+				dbCfg.type = v.second.get<int>("<xmlattr>.type");
+
+				apay_dbCfgVec.push_back(dbCfg);
+			}
+		}
+		
 		mainConfig.sFtpIp = pt.get<string>("root.SftpIp");
 		mainConfig.iSftpPort = pt.get<int>("root.SftpPort");
 		mainConfig.sFtpUser = pt.get<string>("root.SftpUser");
 		mainConfig.sFtpPass = pt.get<string>("root.SftpPass");
+
+		//??��2???����1????? begin
+		apayMainConf.sFtpIp = pt.get<string>("root.apaySftpIp");
+		apayMainConf.iSftpPort = pt.get<int>("root.apaySftpPort");
+		apayMainConf.sFtpUser = pt.get<string>("root.apaySftpUser");
+		apayMainConf.sFtpPass = pt.get<string>("root.apaySftpPass");
+
+		apayMainConf.loadBillFileShPath = pt.get<string>("root.apayLoadFileShPath");
+		apayMainConf.loadBillFileShName = pt.get<string>("root.apayLoadFileShName");
+		apayMainConf.MchBillFilePath = pt.get<string>("root.apayMchBillFilePath");
+
+		m_ApayErrFile = pt.get<string>("root.apayErrorFilePath");
+		//´ú¸¶Ïà¹ØÅäÖÃ end
 
 		mainConfig.sAliGateWayUrl = pt.get<string>("root.ALIGateWayUrl");
 		mainConfig.sAliDetailSuffix = pt.get<string>("root.AliDetailSuffix");
@@ -124,6 +156,9 @@ CBillBusiConfig::CBillBusiConfig(const char* szFileName)
 		mainConfig.sUpdateBillContrastUrl = pt.get<string>("root.UpdateBillContrastUrl");
 		mainConfig.sAddExceptionOrderUrl = pt.get<string>("root.AddExceptionOrderUrl");
 		mainConfig.sApiKey = pt.get<string>("root.ApiKey");
+		mainConfig.sTradeServQryOrderUrl = pt.get<string>("root.TradeServQryOrderUrl");
+		mainConfig.sSignKey = pt.get<string>("root.SignKey");
+
 
 
 		mainConfig.sCallNotifyIp = pt.get<string>("root.CallNotifyIp");
@@ -144,10 +179,16 @@ CBillBusiConfig::CBillBusiConfig(const char* szFileName)
 		mainConfig.service_name_tag = pt.get<string>("root.service_name_tag");
 		mainConfig.service_bank = pt.get<string>("root.service_bank");
 		mainConfig.service_bank_account = pt.get<string>("root.service_bank_account");
+		
 		for (std::vector<DbCfg>::iterator iter = dbCfgVec.begin(); iter != dbCfgVec.end(); ++iter)
 		{
 			CDEBUG_LOG("db config db_name[%s] db_num[%d] host[%s]\n", iter->db_name.c_str(), iter->db_num, iter->host.c_str());
 		}
+		
+		for (std::vector<DbCfg>::iterator iter = apay_dbCfgVec.begin(); iter != apay_dbCfgVec.end(); ++iter)
+		{
+			CDEBUG_LOG("apay db pool  config db_name[%s] db_num[%d] host[%s]\n", iter->db_name.c_str(), iter->db_num, iter->host.c_str());
+		}		
 	}
 	catch(const boost::property_tree::xml_parser::xml_parser_error& e)
 	{
@@ -198,5 +239,61 @@ const CBillBusiConfig::AliPayCfg* CBillBusiConfig::GetAliPayCfg(std::string bm_i
     {
 		return NULL;
     }
+}
+
+
+void CBillBusiConfig::ReadErrCodeFromFile(NameValueMap& inMap)
+{
+	//read configuration
+	using boost::property_tree::ptree;
+	ptree pt;
+
+	string szErrMsg = "";
+
+	read_xml(m_ApayErrFile, pt);
+
+    if(szErrMsg.empty())
+	{
+		BOOST_FOREACH(ptree::value_type& v, pt.get_child("root.transparent"))
+		{
+			if (v.first == "tp_code")
+			{
+                string code = v.second.get<std::string>("<xmlattr>.code");
+                if( string::npos != code.find(inMap["err_code"]) )
+                {
+                    szErrMsg = inMap["err_msg"];
+                }
+			}
+		}
+	}
+	
+    if(szErrMsg.empty())
+	{
+        BOOST_FOREACH(ptree::value_type& v, pt.get_child("root.agentpay_errcode"))
+        {
+            if (v.first == "errcode")
+            {
+                string szGetCode = v.second.get<std::string>("<xmlattr>.code");
+
+                if(szGetCode == inMap["err_code"])
+                {
+                    szErrMsg = v.second.get<std::string>("<xmlattr>.msg");
+                }
+            }
+        }
+	}
+
+	if(szErrMsg.empty())
+	{
+		BOOST_FOREACH(ptree::value_type& v, pt.get_child("root.default_error"))
+		{
+			if (v.first == "default_code")
+			{
+				szErrMsg = v.second.get<std::string>("<xmlattr>.msg");
+			}			
+		}
+	}
+
+    inMap["err_msg"] = szErrMsg;
 }
 

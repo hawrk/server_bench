@@ -18,11 +18,12 @@ import shutil
 # 	# 正常的日子会被丢弃，错误日子会被打印到日志文件里供以后查阅
 
 #通知对账Server
-SERVER_IP = "10.100.100.88"
+SERVER_IP = "10.135.132.113"
 SERVER_PORT = 13680
 
-SETTLE_PATH = "/usr/local/services/spp_speedpos_bill-2.0/client/speedpos_bill/data/paybill/"
-bank_list = ["8966","1001"]
+#SETTLE_PATH = "/usr/local/services/spp_speedpos_bill-2.0/client/speedpos_bill/data/paybill/"
+SETTLE_PATH="/data/sftp/paybill/"
+bank_list = ["1007","1008"]
 WXCHANNEL = "WXPAY"
 ALICHANNEL = "ALIPAY"
 

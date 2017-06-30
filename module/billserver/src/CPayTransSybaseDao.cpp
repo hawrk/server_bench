@@ -47,7 +47,7 @@ INT32 CPayTransSybaseDao::InsertTradeTypeOrderToDB(CSyBase& sql_instance, const 
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
 	CDEBUG_LOG("CPayTransSybaseDao::InsertTradeTypeOrderToDB end ,iRet[%d]",iRet);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertTradeTypeOrderToDB Execute"
@@ -88,7 +88,7 @@ INT32 CPayTransSybaseDao::InsertTradeTypeOrderChannelToDB(CSyBase& sql_instance,
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertTradeTypeOrderChannelToDB Execute"
@@ -119,7 +119,7 @@ INT32 CPayTransSybaseDao::RemoveAlipayDifferenceSuccState(CSyBase& sql_instance,
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_succ_stmt,&_count);
 	CDEBUG_LOG("sql_succ_stmt:[%s]\n", sql_succ_stmt);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"RemoveAlipayDifferenceSuccState Execute"
@@ -150,7 +150,7 @@ INT32 CPayTransSybaseDao::RemoveAlipayDifferenceRefundState(CSyBase& sql_instanc
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_refund_stmt,&_count);
 	CDEBUG_LOG("sql_refund_stmt:[%s]\n", sql_refund_stmt);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"RemoveAlipayDifferenceRefundState Execute"
@@ -190,7 +190,7 @@ INT32 CPayTransSybaseDao::EmptyTableData(CSyBase& sql_instance,
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"EmptyBillSucFlowData Execute"
@@ -236,7 +236,7 @@ INT32 CPayTransSybaseDao::InsertPayIdenticalWxToDB(CSyBase& sql_instance, const 
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
 
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertPayIdenticalWxToDB Execute"
@@ -278,7 +278,7 @@ INT32 CPayTransSybaseDao::InsertRefundIdenticalWxToDB(CSyBase& sql_instance, con
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertRefundIdenticalToDB Execute"
@@ -317,7 +317,7 @@ INT32 CPayTransSybaseDao::InsertPayDistinctWxToDB(CSyBase& sql_instance, const s
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertPayDistinctWxToDB Execute"
@@ -356,7 +356,7 @@ INT32 CPayTransSybaseDao::InsertRefundDistinctWxToDB(CSyBase& sql_instance, cons
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertRefundDistinctWxToDB Execute"
@@ -402,7 +402,7 @@ INT32 CPayTransSybaseDao::InsertAliPayIdenticalToDB(CSyBase& sql_instance,
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertAliPayIdenticalToDB Execute"
@@ -444,7 +444,7 @@ INT32 CPayTransSybaseDao::InsertAliPayIdenticalRefundToDB(CSyBase& sql_instance,
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertAliPayIdenticalToDB Execute"
@@ -484,7 +484,7 @@ INT32 CPayTransSybaseDao::InsertAliPayDistinctToDB(CSyBase& sql_instance, const 
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertAliPayDistinctToDB Execute"
@@ -524,7 +524,7 @@ INT32 CPayTransSybaseDao::InsertAliPayDistinctRefundToDB(CSyBase& sql_instance, 
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	iRet = spp_bill_Insert_Update_Del(0,&param,sql_stmt,&_count);
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"InsertAliPayDistinctRefundToDB Execute"
@@ -566,7 +566,7 @@ INT32 CPayTransSybaseDao::GetWxOverFlowData(CSyBase& sql_instance, const std::st
 		" pay_time >= '%s'  AND  pay_time <= '%s'",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
 
-	CDEBUG_LOG("GetWxOverFlowData count_sql: %s", sql_count);
+	//CDEBUG_LOG("GetWxOverFlowData count_sql: %s", sql_count);
 	iRet = spp_bill_getrecord_count(0,&param,sql_count,&row_count);
 
 	CDEBUG_LOG("GetWxOverFlowData row_count = [%d]",row_count);
@@ -578,13 +578,15 @@ INT32 CPayTransSybaseDao::GetWxOverFlowData(CSyBase& sql_instance, const std::st
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
 		" SELECT "
-		" pay_time, transaction_id, order_no, trade_type, "
+		" convert(datetime,convert(char(8),pay_time,112)||' '||convert(char(8),pay_time,108)) as pay_time,"
+		" transaction_id, order_no, trade_type, "
 		" order_status, refund_id, refund_no "
 		" FROM t_wx_overflow_%s "
 		" WHERE "
 		" pay_time >= '%s'  AND  pay_time <= '%s'",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
 
+	//转了pay_time格式也没个卵用
 	CDEBUG_LOG("GetWxOverFlowData sql: %s", sql_stmt);
 
 	stGetWXOverFlowData_Resp pGetWXOver[row_count];
@@ -603,8 +605,6 @@ INT32 CPayTransSybaseDao::GetWxOverFlowData(CSyBase& sql_instance, const std::st
 		WxFlowSummary wxFlowSum;
 		wxFlowSum.Reset();
 
-		CDEBUG_LOG("pGetWXOver [%s]", pGetWXOver[i].pay_time);
-
 		wxFlowSum.pay_time = pGetWXOver[i].pay_time;//(row[0]) ? row[0] : "";
 		wxFlowSum.transaction_id = pGetWXOver[i].transaction_id;//(row[1]) ? row[1] : "";
 		wxFlowSum.order_no = pGetWXOver[i].order_no;//(row[2]) ? row[2] : "";
@@ -613,22 +613,15 @@ INT32 CPayTransSybaseDao::GetWxOverFlowData(CSyBase& sql_instance, const std::st
 		wxFlowSum.refund_id = pGetWXOver[i].refund_id;//(row[5]) ? row[5] : "";
 		wxFlowSum.refund_no  = pGetWXOver[i].refund_no;//(row[6]) ? row[6] : "";
 
-		wxOverFlowVec.push_back(wxFlowSum);
+		//
+		rtrim(wxFlowSum.order_no);
+		rtrim(wxFlowSum.transaction_id);
+		rtrim(wxFlowSum.order_status);
+		rtrim(wxFlowSum.refund_id);
+		rtrim(wxFlowSum.refund_no);
 
-			/*else
-			{
-			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"FetchRow Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-			return -30;
-			}*/
+		wxOverFlowVec.push_back(wxFlowSum);
 	}
-	//sql_instance.free_result();
-//	if(pGetWXOver)
-//	{
-//		free(pGetWXOver);
-//		pGetWXOver = NULL;
-//	}
 	return RET_HASREC;
 }
 
@@ -638,8 +631,14 @@ INT32 CPayTransSybaseDao::GetAliOverFlowData(CSyBase& sql_instance,
 {
 	CDEBUG_LOG("%s:%s",__FILE__,__func__);
 	int iRet = 0;
+	int row_count = 0;
 	//MYSQL_ROW row;
 	Reset();
+	T_STSYBASE_IN_PARAM param;
+	sprintf(param.user,"%s",sql_instance.ms_user);
+	sprintf(param.pwd,"%s",sql_instance.ms_pass);
+	sprintf(param.host,"%s",sql_instance.ms_host);
+	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
 	char sql_stmt[4096];
 	char sql_count[512];
@@ -650,6 +649,14 @@ INT32 CPayTransSybaseDao::GetAliOverFlowData(CSyBase& sql_instance,
 		" WHERE "
 		" pay_time >= '%s'  AND  pay_time <= '%s'",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	iRet = spp_bill_getrecord_count(0,&param,sql_count,&row_count);
+
+	CDEBUG_LOG("GetAliOverFlowData row_count = [%d]",row_count);
+	if(row_count <= 0)
+	{
+		return RET_HASNOREC;
+	}
 
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
@@ -663,18 +670,11 @@ INT32 CPayTransSybaseDao::GetAliOverFlowData(CSyBase& sql_instance,
 
 	CDEBUG_LOG("GetAliOverFlowData sql: %s", sql_stmt);
 
-	//iRet = sql_instance.query(sql_stmt);
-	int _count = 0;
-	stGetAliOverFlowData_Resp* pGetAliOver = NULL;
-	T_STSYBASE_IN_PARAM param;
-	sprintf(param.user,"%s",sql_instance.ms_user);
-	sprintf(param.pwd,"%s",sql_instance.ms_pass);
-	sprintf(param.host,"%s",sql_instance.ms_host);
-	sprintf(param.dbname,"%s",sql_instance.ms_db);
+	stGetAliOverFlowData_Resp pGetAliOver[row_count];
 
-	iRet = spp_bill_GetAliOverFlowData(0,&param,pGetAliOver,sql_stmt,sql_count,&_count);
+	iRet = spp_bill_GetAliOverFlowData(0,&param,pGetAliOver,sql_stmt,row_count);
 
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"GetAliOverFlowData Execute Failed.Ret[%d]",
@@ -682,45 +682,32 @@ INT32 CPayTransSybaseDao::GetAliOverFlowData(CSyBase& sql_instance,
 		return -20;
 	}
 
-	if (_count <= 0)
-	{
-		// 数据不存在
-		return RET_HASNOREC;
-	}
-
-	for (int i = 0; i < _count; ++i)
+	for (int i = 0; i < row_count; ++i)
 	{
 		AliFlowSummary ali;
 		//if ((row = sql_instance.fetch_row()))
 		//{
 			//CDEBUG_LOG("row[0]:%s row[1]:%s row[2]:%s row[3]:%s row[4]:%s", row[0], row[1], row[2], row[3], row[4]);
-			ali.transaction_id = pGetAliOver[i].transaction_id;//row[0] ? row[0] : "";
-			ali.order_no = pGetAliOver[i].order_no;//row[1] ? row[1] : "";
-			ali.order_status = pGetAliOver[i].order_status;//row[2] ? row[2] : "";
-			ali.pay_time = pGetAliOver[i].pay_time;//row[3] ? row[3] : "";
-			ali.refund_no = pGetAliOver[i].refund_no;//row[4] ? row[4] : "";
-			CDEBUG_LOG("order_no:%s ", ali.order_no.c_str());
-			ali.transaction_id = strTrim(ali.transaction_id);
-			ali.order_no = strTrim(ali.order_no);
-			ali.order_status = strTrim(ali.order_status);
-			ali.pay_time = strTrim(ali.pay_time);
-			ali.refund_no = strTrim(ali.refund_no);
-			aliOverFlowList.push_back(ali);
-		//}
-		//else
-		//{
-		//	snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-		//		"FetchRow Failed.Ret[%d] Err[%u~%s]",
-		//		iRet, sql_instance.get_errno(), sql_instance.get_error());
-		//	return -30;
-		//}
+		ali.transaction_id = pGetAliOver[i].transaction_id;//row[0] ? row[0] : "";
+		ali.order_no = pGetAliOver[i].order_no;//row[1] ? row[1] : "";
+		ali.order_status = pGetAliOver[i].order_status;//row[2] ? row[2] : "";
+		ali.pay_time = pGetAliOver[i].pay_time;//row[3] ? row[3] : "";
+		ali.refund_no = pGetAliOver[i].refund_no;//row[4] ? row[4] : "";
+//		ali.transaction_id = strTrim(ali.transaction_id);
+//		ali.order_no = strTrim(ali.order_no);
+//		ali.order_status = strTrim(ali.order_status);
+//		ali.pay_time = strTrim(ali.pay_time);
+//		ali.refund_no = strTrim(ali.refund_no);
+
+		rtrim(ali.transaction_id);
+		rtrim(ali.order_no);
+		rtrim(ali.order_status);
+		rtrim(ali.refund_no);
+
+		aliOverFlowList.push_back(ali);
+
 	}
-	//sql_instance.free_result();
-	if(pGetAliOver)
-	{
-		free(pGetAliOver);
-		pGetAliOver = NULL;
-	}
+
 	return RET_HASREC;
 }
 
@@ -778,7 +765,7 @@ INT32 CPayTransSybaseDao::TruncateEveryPaymentTypeSysFlowData(CSyBase& sql_insta
 //	CDEBUG_LOG("wx_order_channel_sql:[%s]\n", strWxOrderChannelSql);
 //	CDEBUG_LOG("ali_order_channel_sql:[%s]\n", strAliOrderChannelSql);
 //	CDEBUG_LOG("COMMIT\n");
-	if (iRet != 0)
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"TruncateEveryPaymentTypeSysFlowData Execute"
@@ -806,6 +793,7 @@ int CPayTransSybaseDao::GetPayBillData(CSyBase& sql_instance,
 {
 	CDEBUG_LOG("%s:%s",__FILE__,__func__);
 	int iRet = 0;
+	int row_count = 0;
 	//MYSQL_ROW row;
 
 	Reset();
@@ -813,30 +801,40 @@ int CPayTransSybaseDao::GetPayBillData(CSyBase& sql_instance,
 	char sql_stmt[4096];
 	char sql_count[512];
 
-	snprintf(sql_count, sizeof(sql_count),
-		" SELECT COUNT(DISTINCT(mch_id)) from t_bill_success_flow_%s where order_status = 'SUCCESS' AND "
-		" pay_time >= '%s'  AND  pay_time <= '%s' GROUP BY mch_id ",
-		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
-
-	snprintf(sql_stmt, sizeof(sql_stmt),
-		" SELECT mch_id, SUM(shop_amount), SUM(channel_profit), SUM(service_profit), SUM(payment_profit), SUM(bm_profit), SUM(total_commission), SUM(total_fee), COUNT(*) from t_bill_success_flow_%s where order_status = 'SUCCESS' AND "
-		" pay_time >= '%s'  AND  pay_time <= '%s' GROUP BY mch_id ",
-		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
-
-	CDEBUG_LOG("GetPayBillData sql: %s", sql_stmt);
-
-	//iRet = sql_instance.query(sql_stmt);
-	int _count = 0;
-	stGetPayBillData_Resp* pGetPay = NULL;
 	T_STSYBASE_IN_PARAM param;
 	sprintf(param.user,"%s",sql_instance.ms_user);
 	sprintf(param.pwd,"%s",sql_instance.ms_pass);
 	sprintf(param.host,"%s",sql_instance.ms_host);
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
-	iRet = spp_bill_GetPayBillData(0,&param,pGetPay,sql_stmt,sql_count,&_count);
+	snprintf(sql_count, sizeof(sql_count),
+		" SELECT COUNT(DISTINCT(mch_id)) from t_bill_success_flow_%s where order_status = 'SUCCESS' AND "
+		" pay_time >= '%s'  AND  pay_time <= '%s' GROUP BY mch_id ",
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
 
-	if (iRet != 0)
+	iRet = spp_bill_getrecord_count(0,&param,sql_count,&row_count);
+
+	CDEBUG_LOG(" row_count = [%d]",row_count);
+	if(row_count <= 0)
+	{
+		return RET_HASNOREC;
+	}
+
+	snprintf(sql_stmt, sizeof(sql_stmt),
+		" SELECT mch_id, SUM(shop_amount) as shop_amount, SUM(channel_profit) as channel_profit,"
+		" SUM(service_profit) as service_profit, SUM(payment_profit) as payment_profit, "
+		"SUM(bm_profit) as bm_profit, SUM(total_commission) as total_commission,"
+		" SUM(total_fee) as total_fee, COUNT(*) from t_bill_success_flow_%s where order_status = 'SUCCESS' AND "
+		" pay_time >= '%s'  AND  pay_time <= '%s' GROUP BY mch_id ",
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	CDEBUG_LOG("GetPayBillData sql: %s", sql_stmt);
+
+	stGetPayBillData_Resp pGetPay[row_count];
+
+	iRet = spp_bill_GetPayBillData(0,&param,pGetPay,sql_stmt,row_count);
+
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"GetPayBillData Execute Failed.Ret[%d] ",
@@ -844,45 +842,26 @@ int CPayTransSybaseDao::GetPayBillData(CSyBase& sql_instance,
 		return -20;
 	}
 
-	if (_count <= 0)
-	{
-		// 数据不存在
-		return RET_HASNOREC;
-	}
-
-	for (int i = 0; i < _count; i++)
+	for (int i = 0; i < row_count; i++)
 	{
 		OrderPayBillSumary orderPayBill;
 		orderPayBill.Reset();
-		//if ((row = sql_instance.fetch_row()))
-		if(1)  //TODO:
-		{
-			orderPayBill.mch_id = pGetPay[i].mch_id;//(row[0]) ? row[0] : "";
-			orderPayBill.shop_amount = pGetPay[i].sum_shop_amount;//(row[1]) ? atoll(row[1]) : 0;
-			orderPayBill.channel_profit = pGetPay[i].sum_channel_profit;//(row[2]) ? atoll(row[2]) : 0;
-			orderPayBill.service_profit = pGetPay[i].sum_service_profit;//(row[3]) ? atoll(row[3]) : 0;
-			orderPayBill.payment_profit = pGetPay[i].sum_payment_profit;//(row[4]) ? atoll(row[4]) : 0;
-			orderPayBill.bm_profit = pGetPay[i].sum_bm_profit;//(row[5]) ? atoll(row[5]) : 0;
-			orderPayBill.total_commission = pGetPay[i].sum_total_commission;//(row[6]) ? atoll(row[6]) : 0;
-			orderPayBill.total_fee = pGetPay[i].sum_total_fee;//(row[7]) ? atoll(row[7]) : 0;
-			orderPayBill.trade_count = pGetPay[i].count;//(row[8]) ? atoll(row[8]) : 0;
+		orderPayBill.mch_id = pGetPay[i].mch_id;//(row[0]) ? row[0] : "";
+		orderPayBill.shop_amount = pGetPay[i].sum_shop_amount;//(row[1]) ? atoll(row[1]) : 0;
+		orderPayBill.channel_profit = pGetPay[i].sum_channel_profit;//(row[2]) ? atoll(row[2]) : 0;
+		orderPayBill.service_profit = pGetPay[i].sum_service_profit;//(row[3]) ? atoll(row[3]) : 0;
+		orderPayBill.payment_profit = pGetPay[i].sum_payment_profit;//(row[4]) ? atoll(row[4]) : 0;
+		orderPayBill.bm_profit = pGetPay[i].sum_bm_profit;//(row[5]) ? atoll(row[5]) : 0;
+		orderPayBill.total_commission = pGetPay[i].sum_total_commission;//(row[6]) ? atoll(row[6]) : 0;
+		orderPayBill.total_fee = pGetPay[i].sum_total_fee;//(row[7]) ? atoll(row[7]) : 0;
+		orderPayBill.trade_count = pGetPay[i].count;//(row[8]) ? atoll(row[8]) : 0;
 
-			orderPayBillSMap.insert(std::make_pair(orderPayBill.mch_id, orderPayBill));
-		}
-		else
-		{
-			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-				"FetchRow Failed.Ret[%d] ",
-				iRet);
-			return -30;
-		}
+		rtrim(orderPayBill.mch_id);
+
+		orderPayBillSMap.insert(std::make_pair(orderPayBill.mch_id, orderPayBill));
+
 	}
-	//sql_instance.free_result();
-	if(pGetPay)
-	{
-		free(pGetPay);
-		pGetPay = NULL;
-	}
+
 	return RET_HASREC;
 
 
@@ -895,6 +874,7 @@ int CPayTransSybaseDao::GetRefundBillData(CSyBase& sql_instance,
 {
 	CDEBUG_LOG("%s:%s",__FILE__,__func__);
 	int iRet = 0;
+	int row_count = 0;
 	//MYSQL_ROW row;
 
 	Reset();
@@ -902,30 +882,40 @@ int CPayTransSybaseDao::GetRefundBillData(CSyBase& sql_instance,
 	char sql_stmt[4096];
 	char sql_count[512];
 
-	snprintf(sql_count,sizeof(sql_count),
-		" SELECT COUNT(DISTINCT(mch_id)) FROM t_bill_success_flow_%s where order_status = 'REFUND' AND "
-		" pay_time >= '%s'  AND  pay_time <= '%s' ",
-		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
-
-	snprintf(sql_stmt, sizeof(sql_stmt),
-		" SELECT mch_id, SUM(shop_amount), SUM(channel_profit), SUM(service_profit), SUM(payment_profit), SUM(bm_profit), SUM(total_commission), SUM(refund_fee), COUNT(*) from t_bill_success_flow_%s where order_status = 'REFUND' AND "
-		" pay_time >= '%s'  AND  pay_time <= '%s' GROUP BY mch_id ",
-		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
-
-	CDEBUG_LOG("GetRefundBillData sql: %s", sql_stmt);
-
-	//iRet = sql_instance.query(sql_stmt);
-	int _count = 0;
-	stGetRefundBillData_Resp* pGetRefund = NULL;
 	T_STSYBASE_IN_PARAM param;
 	sprintf(param.user,"%s",sql_instance.ms_user);
 	sprintf(param.pwd,"%s",sql_instance.ms_pass);
 	sprintf(param.host,"%s",sql_instance.ms_host);
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
-	iRet = spp_bill_GetRefundBillData(0,&param,pGetRefund,sql_stmt,sql_count,&_count);
+	snprintf(sql_count,sizeof(sql_count),
+		" SELECT COUNT(DISTINCT(mch_id)) FROM t_bill_success_flow_%s where order_status = 'REFUND' AND "
+		" pay_time >= '%s'  AND  pay_time <= '%s' ",
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
 
-	if (iRet != 0)
+	iRet = spp_bill_getrecord_count(0,&param,sql_count,&row_count);
+
+	CDEBUG_LOG(" row_count = [%d]",row_count);
+	if(row_count <= 0)
+	{
+		return RET_HASNOREC;
+	}
+
+	snprintf(sql_stmt, sizeof(sql_stmt),
+		" SELECT mch_id, SUM(shop_amount) as shop_amount, SUM(channel_profit) as channel_profit, "
+		" SUM(service_profit) as service_profit, SUM(payment_profit) as payment_profit, "
+		" SUM(bm_profit) as bm_profit, SUM(total_commission) as total_commission, "
+		" SUM(refund_fee) as refund_fee, COUNT(*) from t_bill_success_flow_%s where order_status = 'REFUND' AND "
+		" pay_time >= '%s'  AND  pay_time <= '%s' GROUP BY mch_id ",
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	CDEBUG_LOG("GetRefundBillData sql: %s", sql_stmt);
+
+	stGetRefundBillData_Resp pGetRefund[row_count];
+
+	iRet = spp_bill_GetRefundBillData(0,&param,pGetRefund,sql_stmt,row_count);
+
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"GetRefundBillData Execute Failed.Ret[%d] ",
@@ -933,44 +923,28 @@ int CPayTransSybaseDao::GetRefundBillData(CSyBase& sql_instance,
 		return -20;
 	}
 
-	if (_count <= 0)
-	{
-		// 数据不存在
-		return RET_HASNOREC;
-	}
-
-	for (int i = 0; i < _count; i++)
+	for (int i = 0; i < row_count; i++)
 	{
 		OrderRefundBillSumary orderRefundBill;
 		orderRefundBill.Reset();
 		//if ((row = sql_instance.fetch_row()))
 		//{
-			orderRefundBill.mch_id = pGetRefund[i].mch_id;//(row[0]) ? row[0] : "";
-			orderRefundBill.shop_amount = pGetRefund[i].sum_shop_amount;//(row[1]) ? atoll(row[1]) : 0;
-			orderRefundBill.channel_profit = pGetRefund[i].sum_channel_profit;//(row[2]) ? atoll(row[2]) : 0;
-			orderRefundBill.service_profit = pGetRefund[i].sum_service_profit;//(row[3]) ? atoll(row[3]) : 0;
-			orderRefundBill.payment_profit = pGetRefund[i].sum_payment_profit;//(row[4]) ? atoll(row[4]) : 0;
-			orderRefundBill.bm_profit = pGetRefund[i].sum_bm_profit;//(row[5]) ? atoll(row[5]) : 0;
-			orderRefundBill.total_commission = pGetRefund[i].sum_total_commission;//(row[6]) ? atoll(row[6]) : 0;
-			orderRefundBill.refund_fee = pGetRefund[i].sum_refund_fee;//(row[7]) ? atoll(row[7]) : 0;
-			orderRefundBill.refund_count = pGetRefund[i].count;//(row[8]) ? atoll(row[8]) : 0;
+		orderRefundBill.mch_id = pGetRefund[i].mch_id;//(row[0]) ? row[0] : "";
+		orderRefundBill.shop_amount = pGetRefund[i].sum_shop_amount;//(row[1]) ? atoll(row[1]) : 0;
+		orderRefundBill.channel_profit = pGetRefund[i].sum_channel_profit;//(row[2]) ? atoll(row[2]) : 0;
+		orderRefundBill.service_profit = pGetRefund[i].sum_service_profit;//(row[3]) ? atoll(row[3]) : 0;
+		orderRefundBill.payment_profit = pGetRefund[i].sum_payment_profit;//(row[4]) ? atoll(row[4]) : 0;
+		orderRefundBill.bm_profit = pGetRefund[i].sum_bm_profit;//(row[5]) ? atoll(row[5]) : 0;
+		orderRefundBill.total_commission = pGetRefund[i].sum_total_commission;//(row[6]) ? atoll(row[6]) : 0;
+		orderRefundBill.refund_fee = pGetRefund[i].sum_refund_fee;//(row[7]) ? atoll(row[7]) : 0;
+		orderRefundBill.refund_count = pGetRefund[i].count;//(row[8]) ? atoll(row[8]) : 0;
 
-			orderRefundBillSMap.insert(std::make_pair(orderRefundBill.mch_id, orderRefundBill));
-		//}
-			/*else
-			{
-			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"FetchRow Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-			return -30;
-			}*/
+		rtrim(orderRefundBill.mch_id);
+
+		orderRefundBillSMap.insert(std::make_pair(orderRefundBill.mch_id, orderRefundBill));
+
 	}
-	//sql_instance.free_result();
-	if(pGetRefund)
-	{
-		free(pGetRefund);
-		pGetRefund = NULL;
-	}
+
 	return RET_HASREC;
 }
 
@@ -980,37 +954,47 @@ int CPayTransSybaseDao::GetChannelBillData(CSyBase& sql_instance, const std::str
 {
 	CDEBUG_LOG("%s:%s",__FILE__,__func__);
 	int iRet = 0;
+	int row_count = 0;
 	//MYSQL_ROW row;
 	Reset();
 	//t_order_channel_flow
 	char sql_stmt[4096];
 	char sql_count[512];
 
-	snprintf(sql_stmt, sizeof(sql_stmt),
-		" SELECT COUNT(DISTINCT(channel_id)) from %s where order_status = '%s' AND "
-		" pay_time >= '%s'  AND  pay_time <= '%s' and order_no in (SELECT order_no from t_bill_success_flow_%s where pay_time >= '%s' and pay_time <= '%s' GROUP BY order_no) GROUP BY channel_id ",
-		strTableFix.c_str(), order_status.c_str(), strBeginTime.c_str(), strEndTime.c_str(),
-		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
-
-	snprintf(sql_stmt, sizeof(sql_stmt),
-		" SELECT channel_id, SUM(channel_profit) from %s where order_status = '%s' AND "
-		" pay_time >= '%s'  AND  pay_time <= '%s' and order_no in (SELECT order_no from t_bill_success_flow_%s where pay_time >= '%s' and pay_time <= '%s' GROUP BY order_no) GROUP BY channel_id ",
-		strTableFix.c_str(), order_status.c_str(), strBeginTime.c_str(), strEndTime.c_str(),
-		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
-
-	CDEBUG_LOG("GetChannelBillData sql: %s", sql_stmt);
-
-	//iRet = sql_instance.query(sql_stmt);
-	int _count = 0;
-	stGetChannelBillData_Resp* pGetChannel = NULL;
 	T_STSYBASE_IN_PARAM param;
 	sprintf(param.user,"%s",sql_instance.ms_user);
 	sprintf(param.pwd,"%s",sql_instance.ms_pass);
 	sprintf(param.host,"%s",sql_instance.ms_host);
 	sprintf(param.dbname,"%s",sql_instance.ms_db);
 
-	iRet = spp_bill_GetChannelBillData(0,&param,pGetChannel,sql_stmt,sql_count,&_count);
-	if (iRet != 0)
+	snprintf(sql_count, sizeof(sql_count),
+		" SELECT COUNT(DISTINCT(channel_id)) from %s where order_status = '%s' AND "
+		" pay_time >= '%s'  AND  pay_time <= '%s' and order_no in (SELECT order_no from t_bill_success_flow_%s where pay_time >= '%s' and pay_time <= '%s' GROUP BY order_no) GROUP BY channel_id ",
+		strTableFix.c_str(), order_status.c_str(), strBeginTime.c_str(), strEndTime.c_str(),
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	CDEBUG_LOG("count sql = [%s]",sql_count);
+	iRet = spp_bill_getrecord_count(0,&param,sql_count,&row_count);
+
+	CDEBUG_LOG(" row_count = [%d]",row_count);
+	if(row_count <= 0)
+	{
+		return RET_HASNOREC;
+	}
+
+	snprintf(sql_stmt, sizeof(sql_stmt),
+		" SELECT channel_id, SUM(channel_profit) as channel_profit from %s where order_status = '%s' AND "
+		" pay_time >= '%s'  AND  pay_time <= '%s' and order_no in (SELECT order_no from t_bill_success_flow_%s where pay_time >= '%s' and pay_time <= '%s' GROUP BY order_no) GROUP BY channel_id ",
+		strTableFix.c_str(), order_status.c_str(), strBeginTime.c_str(), strEndTime.c_str(),
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	CDEBUG_LOG("GetChannelBillData sql: %s", sql_stmt);
+
+	stGetChannelBillData_Resp pGetChannel[row_count];
+
+
+	iRet = spp_bill_GetChannelBillData(0,&param,pGetChannel,sql_stmt,row_count);
+	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
 			"GetChannelBillData Execute Failed.Ret[%d]",
@@ -1018,33 +1002,18 @@ int CPayTransSybaseDao::GetChannelBillData(CSyBase& sql_instance, const std::str
 		return -20;
 	}
 
-	if (_count <= 0)
-	{
-		// 数据不存在
-		return RET_HASNOREC;
-	}
-
-	for (int i = 0; i < _count; i++)
+	for (int i = 0; i < row_count; i++)
 	{
 		//if ((row = sql_instance.fetch_row()))
 		//{
 			std::string channel_id = pGetChannel[i].channel_id;//(row[0]) ? row[0] : "";
 			int channel_profit = pGetChannel[i].sum_channel_profit;//(row[1]) ? atoll(row[1]) : 0;
+
+			rtrim(channel_id);
+
 			channelMap.insert(std::make_pair(channel_id, channel_profit));
-		//}
-			/*else
-			{
-			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"FetchRow Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-			return -30;
-			}*/
+
 	}
-	//sql_instance.free_result();
-	if(pGetChannel)
-	{
-		free(pGetChannel);
-		pGetChannel = NULL;
-	}
+
 	return RET_HASREC;
 }

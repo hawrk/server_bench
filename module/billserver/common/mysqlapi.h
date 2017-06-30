@@ -18,17 +18,11 @@ using namespace std;
 typedef map<string, string> SqlResultSet;
 typedef vector<SqlResultSet> SqlResultMapVector;
 
-#define RET_HASREC     1
-#define RET_HASNOREC   0
-#define RET_FAIL      -1
-
-#define	NSTR	""
-
 
 /**
-  * ±¾Àà¶Ôclib_mysqlµÄ½Ó¿Ú½øĞĞÁË¼òµ¥·â×°£¬Ö÷Òª°üÀ¨ÈçÏÂ¹¦ÄÜ:
-  *     1¡¢²éÑ¯¼ÇÂ¼
-  *     2¡¢Ö´ĞĞ²åÈë¡¢¸üĞÂÓï¾ä
+  * æœ¬ç±»å¯¹clib_mysqlçš„æ¥å£è¿›è¡Œäº†ç®€å•å°è£…ï¼Œä¸»è¦åŒ…æ‹¬å¦‚ä¸‹åŠŸèƒ½:
+  *     1ã€æŸ¥è¯¢è®°å½•
+  *     2ã€æ‰§è¡Œæ’å…¥ã€æ›´æ–°è¯­å¥
   */
 class CMySQL
 {
@@ -36,29 +30,38 @@ public:
     CMySQL();
     ~CMySQL();
 
+	void Begin(clib_mysql& sql_instance) throw(CTrsExp);
+
+	void Commit(clib_mysql& sql_instance) throw(CTrsExp);
+
+	void Rollback(clib_mysql& sql_instance) throw(CTrsExp);
+
     /**
-     * Ö´ĞĞ²éÑ¯(×î¶à»ñÈ¡1Ìõ¼ÇÂ¼)
-     * ·µ»Ø:  0:ÎŞ¼ÇÂ¼  1:ÓĞ¼ÇÂ¼
+     * æ‰§è¡ŒæŸ¥è¯¢(æœ€å¤šè·å–1æ¡è®°å½•)
+     * è¿”å›:  0:æ— è®°å½•  1:æœ‰è®°å½•
      */
     int QryAndFetchResMap(clib_mysql& sql_instance, 
     						       const char * sql_str, 
     						       SqlResultSet & objMap) throw(CTrsExp);
 	 /**
-     * Ö´ĞĞ²éÑ¯(»ñÈ¡¶àÌõ¼ÇÂ¼)
-     * ·µ»Ø:  0:ÎŞ¼ÇÂ¼  1:ÓĞ¼ÇÂ¼
+     * æ‰§è¡ŒæŸ¥è¯¢(è·å–å¤šæ¡è®°å½•)
+     * è¿”å›:  0:æ— è®°å½•  1:æœ‰è®°å½•
      */
     int QryAndFetchResMVector(clib_mysql& sql_instance, 
     									 const char * sql_str, 
     									 SqlResultMapVector & objMapVector) throw(CTrsExp);
 	 /**
-     * Ö´ĞĞ²åÈë¡¢¸üĞÂ
-     * ·µ»Ø:  1:³É¹¦
+     * æ‰§è¡Œæ’å…¥ã€æ›´æ–°
+     * è¿”å›:  1:æˆåŠŸ
      */
 	int Execute(clib_mysql& sql_instance, const char * sql_str) throw(CTrsExp);
 
 	static char *ValiStr(char *str);
 
 	int getAffectedRows(){ return m_iAffectedRows;}
+
+	// è½¬ä¹‰
+	static string EscapeStr(const string & buff);
 
 private:
 	void Reset();

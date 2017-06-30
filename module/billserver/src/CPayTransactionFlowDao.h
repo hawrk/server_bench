@@ -20,7 +20,8 @@
 #include <list>
 #include "../business/bill_protocol.h"
 #include "common.h"
-
+#include "mysqlapi.h"
+#include "speed_bill_protocol.h"
 class clib_mysql;
 
 class CPayTransactionFlowDao : public CObject
@@ -85,25 +86,63 @@ class CPayTransactionFlowDao : public CObject
 		INT32 InsertRefundDistinctWxToDB(clib_mysql& sql_instance, 
 							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime);
 
+		//本地成功多
+		INT32 InsertPaySuccessToDB(clib_mysql& sql_instance, const std::string& strBmId,
+				const std::string& strBeginTime, const std::string& strEndTime,const std::string& strPayChannel);
+		//本地退款多
+		INT32 InsertPayRefundToDB(clib_mysql& sql_instance, const std::string& strBmId,
+				const std::string& strBeginTime, const std::string& strEndTime,const std::string& paychannel);
+
 		int GetPayBillData(clib_mysql& sql_instance,
-							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime,
+							const std::string& strBmId, const std::string strChannel, const std::string& strBeginTime, const std::string& strEndTime,
 							std::map<std::string, OrderPayBillSumary>& orderPayBillSMap);
 
 		int GetRefundBillData(clib_mysql& sql_instance,
-							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime,
+							const std::string& strBmId, const std::string strChannel,const std::string& strBeginTime, const std::string& strEndTime,
 							std::map<std::string, OrderRefundBillSumary>& orderRefundBillSMap);
 
-		int GetChannelBillData(clib_mysql& sql_instance, const std::string& strTableFix, const std::string& strBmId,
+		int GetChannelBillData(clib_mysql& sql_instance, const std::string& strTableFix, const std::string& strBmId,const std::string& Chann,
 						const std::string& strBeginTime, const std::string& strEndTime,
-						const std::string& order_status, std::map<std::string, int>& channelMap);
+						const std::string& order_status, std::map<std::string, OrderChannelFlowData>& channelMap);
 
 		int GetWxOverFlowData(clib_mysql& sql_instance,
 						const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime,
 						std::vector<WxFlowSummary>& wxOverFlowVec);
 
+		/*
+		 * 状态不一致，补单 BEGIN
+		 */
+		INT32 InsertToChannelFlow(clib_mysql& sql_instance,const string& tableName,StringMap& channelMap);
+
+		INT32 InsertTOOrderSuccFlow(clib_mysql& sql_instance,StringMap& orderMap);
+
+		INT32 UpdateAbnormalStatus(clib_mysql& sql_instance,StringMap& order_no);
+
+		/*
+		 * 补单操作 END
+		 */
+
+
+		//清分表操作
+		INT32 InsertDistributionDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
+						const std::string& pay_channel,OrderStat& ordStat,const char* fund_type);
+
+		//结算表操作
+		INT32 InsertSettleDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
+						const std::string& pay_channel,TRemitBill& remitBill);
+
+		INT32 InsertwxAbnormalDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
+						const std::string& pay_channel,std::vector<WxFlowSummary>& wxOverFlowVec,int index);
+
+		INT32 InsertaliAbnormalDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
+						const std::string& pay_channel,std::vector<AliFlowSummary>& aliOverFlowVec,int index);
+
 		int GetAliOverFlowData(clib_mysql& sql_instance,
 					const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime,
 					std::vector<AliFlowSummary>& aliOverFlowList);
+
+		INT32 InsertSummaryDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
+				const std::string& strBeginTime,const std::string& strEndTime,const char* pay_channel);
 
 
 		INT32 InsertTradeTypeOrderToDB(clib_mysql& sql_instance, const std::string& strBmId,
@@ -112,7 +151,9 @@ class CPayTransactionFlowDao : public CObject
 		INT32 InsertTradeTypeOrderChannelToDB(clib_mysql& sql_instance, const std::string& strBmId,
 								const std::string& pay_channel, const std::string& strTableName);
 
-		INT32 TruncateEveryPaymentTypeSysFlowData(clib_mysql& sql_instance, const std::string& strBmId);
+		INT32 TruncateEveryPaymentTypeSysFlowData(clib_mysql& sql_instance, const std::string& strBmId,const std::string& pay_channel);
+
+		INT32 LoadFiletoDB(clib_mysql& sql_instance, const std::string& strFileName,const std::string& strTableName);
 
 		INT32 RemoveAlipayDifferenceSuccState(clib_mysql& sql_instance, const std::string& strBmId);
 

@@ -49,8 +49,11 @@ INT32 CSpeedPosConfig::LoadConfig(const CHAR *pchConfig)
 
 	//settle_gen_server
 	fprintf(stderr,"load settle_server...\n");
-	FETCH_SERVER_INFO("settle_server",m_stSettleServer);
+	FETCH_SERVER_INFO("id_server",m_stIDServer);
 
+	//agentpay_server
+	fprintf(stderr,"load agentpay_server...\n");
+	FETCH_SERVER_INFO("agentpay_server",m_stApayServer);
 
 #ifdef _SYBASE
 
@@ -89,16 +92,53 @@ INT32 CSpeedPosConfig::LoadConfig(const CHAR *pchConfig)
 	std::string sBillPwd = xBillDbNode.getAttribute("pwd");
 	m_stBillDbName = xBillDbNode.getAttribute("db");
 
+	fprintf(stderr, "load apay bill db...\n");
+	XMLNode xApayBillDbNode = xMainNode.getChildNode("apay_bill_db");
+	std::string sApayBillIp = xApayBillDbNode.getAttribute("ip");
+	int iApayBillPort = atoi(xApayBillDbNode.getAttribute("port"));
+	std::string sApayBillUser = xApayBillDbNode.getAttribute("user");
+	std::string sApayBillPwd = xApayBillDbNode.getAttribute("pwd");
+	m_apayBillDbName = xApayBillDbNode.getAttribute("db");
+
+	fprintf(stderr, "load apay conf db...\n");
+	XMLNode xApayConfDbNode = xMainNode.getChildNode("apay_conf_db");
+	std::string sApayConfIp = xApayConfDbNode.getAttribute("ip");
+	int iApayConfPort = atoi(xApayConfDbNode.getAttribute("port"));
+	std::string sApayConfUser = xApayConfDbNode.getAttribute("user");
+	std::string sApayConfPwd = xApayConfDbNode.getAttribute("pwd");
+	m_apayConfDbName = xApayConfDbNode.getAttribute("db");
+
 	pShopDB = new clib_mysql;
 	pShopDB->init(shopIp.c_str(), shop_port, shopUser.c_str(), shopPwd.c_str());
 
 	pBillDB = new clib_mysql;
 	pBillDB->init(sBillIp.c_str(), iBillPort, sBillUser.c_str(), sBillPwd.c_str());
+
+	pApayBillDB = new clib_mysql;
+	pApayBillDB->init(sApayBillIp.c_str(), iApayBillPort, sApayBillUser.c_str(), sApayBillPwd.c_str());	
+
+	pApayConfDB = new clib_mysql;
+	pApayConfDB->init(sApayConfIp.c_str(), iApayConfPort, sApayConfUser.c_str(), sApayConfPwd.c_str());		
 #endif
     //notify
    /* fprintf( stderr, "load notify...\n" );
     XMLNode xNotify = xMainNode.getChildNode("notify");
     m_kNotifyKey = atoll( xNotify.getAttribute("ipckey") );*/
+
+	fprintf(stderr, "load RabbitMQ...\n");
+	XMLNode xRabbitMqNode = xMainNode.getChildNode("rabbitmq");
+	std::string mqUser = xRabbitMqNode.getAttribute("user_name");
+	std::string mqPwd = xRabbitMqNode.getAttribute("passwd");
+	std::string mqIp = xRabbitMqNode.getAttribute("ip");
+	int mqPort = atoi(xRabbitMqNode.getAttribute("port"));
+	std::string mqVHost = xRabbitMqNode.getAttribute("vhost");
+	m_strExchangName = xRabbitMqNode.getAttribute("exchang_name");
+	m_strQueueName = xRabbitMqNode.getAttribute("queue_name");
+	m_strQueueKey = xRabbitMqNode.getAttribute("key");
+	char szCfg[512] = { 0 };
+	snprintf(szCfg, sizeof(szCfg), "%s:%s@%s:%d/%s", mqUser.c_str(), mqPwd.c_str(), mqIp.c_str(), mqPort, mqVHost.c_str());
+	m_rabbitMqClient = new CRabbitMQClient;
+	m_rabbitMqClient->Init(szCfg, m_strExchangName.c_str(), m_strQueueName.c_str(), m_strQueueKey.c_str());
 	
 
     //singleLimitAtLeast
@@ -127,6 +167,13 @@ INT32 CSpeedPosConfig::LoadConfig(const CHAR *pchConfig)
 	{
 		pDBPool->AddDBConn(it_dbcfg->db_num, it_dbcfg->type, it_dbcfg->host, it_dbcfg->port, it_dbcfg->user, it_dbcfg->pswd);
 	}
+
+	pApayDBPool = new CDBPool;
+	std::vector<CBillBusiConfig::DbCfg>::iterator it_apay_dbcfg = pBusConfig->apay_dbCfgVec.begin();
+	for (; it_apay_dbcfg != pBusConfig->apay_dbCfgVec.end(); ++it_apay_dbcfg)
+	{
+		pApayDBPool->AddDBConn(it_apay_dbcfg->db_num, it_apay_dbcfg->type, it_apay_dbcfg->host, it_apay_dbcfg->port, it_apay_dbcfg->user, it_apay_dbcfg->pswd);
+	}	
 #endif
 
 
@@ -156,7 +203,20 @@ INT32 CSpeedPosConfig::InitOrderServer(CSpeedPosServer& order)
 {
    
 
-    return order.Init(m_stTradeServer,m_stSettleServer);
+    return order.Init(m_stTradeServer);
 }
+
+INT32 CSpeedPosConfig::InitServer()
+{
+	m_apaySocket = new CSocket;
+	m_apaySocket->SetServer( m_stApayServer );
+
+	//init id server
+	m_IDSocket = new CSocket;
+	m_IDSocket->SetServer( m_stIDServer );
+
+	return 0;
+}
+
 
 

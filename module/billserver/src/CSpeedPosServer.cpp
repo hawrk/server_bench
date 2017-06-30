@@ -36,7 +36,7 @@ CSpeedPosServer::~CSpeedPosServer()
 	
 }
 
-INT32 CSpeedPosServer::Init(const CommServer& stTradeGenServer,const CommServer& stSettleGenServer)
+INT32 CSpeedPosServer::Init(const CommServer& stTradeGenServer)
 {
 	BEGIN_LOG(__func__);
 	INT32 iRet = 0;
@@ -45,14 +45,6 @@ INT32 CSpeedPosServer::Init(const CommServer& stTradeGenServer,const CommServer&
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg), "Clent Init Failed.Ret[%d] Err[%s]",
 			iRet, sppClent.GetErrorMessage());
-		return ORDER_RET_SYSERR;
-	}
-	//初始化settle server
-	iRet = settleClient.Init(stSettleGenServer);
-	if(iRet != 0)
-	{
-		snprintf(m_szErrMsg, sizeof(m_szErrMsg), "Clent Init Failed.Ret[%d] Err[%s]",
-			iRet, settleClient.GetErrorMessage());
 		return ORDER_RET_SYSERR;
 	}
 	return 0;
@@ -260,6 +252,73 @@ int CSpeedPosServer::SendRequestDownload(const std::string strUrl, std::string& 
 	return 0;
 }
 
+int CSpeedPosServer::SendRequestTradeServapi(const std::string& sign_key,
+									const std::string& trade_serv_url,
+									StringMap& paramMap,
+									std::string& responseStr)
+{
+	BEGIN_LOG(__func__);
+	//INT32 iRet = 0;
+	CURL *pCurl = NULL;
+	CDEBUG_LOG("send_request_trade_server begin :url = [%s]",trade_serv_url.c_str());
+	tinyxml2::XMLPrinter oPrinter;
+	StringMap::const_iterator iter;
+	char szSign[33];
+	tinyxml2::XMLDocument doc_wx;
+	tinyxml2::XMLNode* pXmlNode = doc_wx.InsertEndChild(doc_wx.NewElement("xml"));
+	if (!pXmlNode)
+	{
+		return ERR_CREATE_XMLNode;
+	}
+	std::string content = "";
+	for (iter = paramMap.begin();
+		iter != paramMap.end(); ++iter) {
+		if (!content.empty()) {
+			content.push_back('&');
+		}
+		content.append(iter->first);
+		content.push_back('=');
+		content.append(iter->second);
+	}
+	char szBuf[1024] = { 0 };
+	snprintf(szBuf, sizeof(szBuf), "%s&key=%s", content.c_str(), sign_key.c_str());
+	//CDEBUG_LOG("content : [%s]\n", szBuf);
+	GetMd5(szBuf, strlen(szBuf), szSign);
+	for (iter = paramMap.begin();
+		iter != paramMap.end(); ++iter)
+	{
+		SetOneFieldToXml(&doc_wx, pXmlNode, iter->first.c_str(), iter->second.c_str(), false);
+	}
+	if (SetOneFieldToXml(&doc_wx, pXmlNode, "sign", szSign, false) != 0);
+	doc_wx.Accept(&oPrinter);
+	std::string strReq = oPrinter.CStr();
+	pCurl = curl_easy_init();
+	CDEBUG_LOG("send trade server Request: [%s]\n", strReq.c_str());
+	std::stringstream ssBody;
+	//curl_easy_setopt(pCurl, CURLOPT_TIMEOUT, 2);
+	curl_easy_setopt(pCurl, CURLOPT_URL, trade_serv_url.c_str());
+	curl_easy_setopt(pCurl, CURLOPT_HEADER, false);
+	curl_easy_setopt(pCurl, CURLOPT_POST, true);
+	curl_easy_setopt(pCurl, CURLOPT_POSTFIELDS, strReq.c_str());
+	curl_easy_setopt(pCurl, CURLOPT_POSTFIELDSIZE, strReq.size());
+	curl_easy_setopt(pCurl, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_easy_setopt(pCurl, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, write_data);
+	curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, &ssBody);
+
+	CURLcode eRetCode = curl_easy_perform(pCurl);
+	if (CURLE_OK != eRetCode)
+	{
+		return eRetCode;
+	}
+	curl_easy_cleanup(pCurl);
+	pCurl = NULL;
+	const std::string& strBody = ssBody.str();
+	CDEBUG_LOG("recv : [%s]\n", strBody.c_str());
+	responseStr = strBody;
+	return 0;
+}
+
 /**
 * brief:
 * param:
@@ -323,6 +382,10 @@ int CSpeedPosServer::CallGetBankNoApi(TRemitBill& remitBill)
 	std::string strGetBankNoRsp;
 	iRet = SendRequestDataApi(mainConfig.sApiKey, mainConfig.sGetBankNoApiUrl, getBankNoMap, strGetBankNoRsp);
 	CDEBUG_LOG(" GetBankNoApiUrl url:[%s] strGetBankNoRsp:%s\n", mainConfig.sGetBankNoApiUrl.c_str(), strGetBankNoRsp.c_str());
+
+	cJSON* root = cJSON_Parse(strGetBankNoRsp.c_str());
+	cJSON* error  = cJSON_GetObjectItem(root, "error");
+	iRet = error->valueint;
 	if (iRet < 0)
 	{
 		snprintf(m_szErrMsg, sizeof(m_szErrMsg), "SendRequestDataApi failed ! "
@@ -342,6 +405,8 @@ int CSpeedPosServer::CallGetBankNoApi(TRemitBill& remitBill)
 	if ((iterJson = rspMap.find("is_public")) != rspMap.end()) remitBill.sBankCardType = iterJson->second.toString();  //银行卡号对公对私
 	if ((iterJson = rspMap.find("bank_type")) != rspMap.end()) remitBill.sBankType = iterJson->second.toString();  //银行类型
 	if ((iterJson = rspMap.find("branch_no")) != rspMap.end()) remitBill.sBranchNo = iterJson->second.toString();   //银行网点号
+	if ((iterJson = rspMap.find("shop_name")) != rspMap.end()) remitBill.sShopName = iterJson->second.toString();  //商户名称
+	if ((iterJson = rspMap.find("cycle")) != rspMap.end()) remitBill.sCycle = iterJson->second.toString();    //结算周期
 
 	CDEBUG_LOG(" sBankCardNo:[%s] sBankCardType[%s]:sBankOwner:[%s] sShopName[%s]\n",
 			remitBill.sBankCardNo.c_str(), remitBill.sBankCardType.c_str(),remitBill.sBankOwner.c_str(), remitBill.sName.c_str());
@@ -499,6 +564,8 @@ int CSpeedPosServer::CallUpdateSettleLogApi(const std::string& strBmId, const st
 	addSettleMap.insert(StringMap::value_type("bm_id", strBmId));
 	addSettleMap.insert(StringMap::value_type("pay_channel", sPayChannel));
 	addSettleMap.insert(StringMap::value_type("accountid", remitBill.account_id));
+	addSettleMap.insert(StringMap::value_type("bank_cardno", remitBill.sBankCardNo));
+	addSettleMap.insert(StringMap::value_type("bank_owner", remitBill.sBankOwner));
 	addSettleMap.insert(StringMap::value_type("type", remitBill.sType));
 	addSettleMap.insert(StringMap::value_type("dateflag", remitBill.sPayTime));
 	addSettleMap.insert(StringMap::value_type("paydate", remitBill.sRemitTime));

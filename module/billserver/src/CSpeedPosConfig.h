@@ -24,6 +24,7 @@
 #include "dc/dcreporter.h"
 #include "CSpeedPosServer.h"
 #include "CBillBusiConfig.h"
+#include "CRabbitMQClient.h"
 
 using base::comm::DCReporter;
 
@@ -35,10 +36,13 @@ class CSpeedPosConfig : public CObject
 #else
 			pShopDB = NULL;
 			pBillDB = NULL;
+			pApayBillDB = NULL;
+			pApayConfDB = NULL;
 #endif
 			m_SingleLimitAtLeastUnderlyingRule = false;
 			iDbIndex = 0;
 			pBusConfig = NULL;
+			pApayDBPool = NULL;
 		}
 		virtual ~CSpeedPosConfig(){
 #ifdef _SYBASE
@@ -55,8 +59,42 @@ class CSpeedPosConfig : public CObject
 				delete pDBPool;
 				pDBPool = NULL;
 			}
+			
 			if (pBillDB)
-			{ delete pBillDB; pBillDB = NULL; }
+			{
+				delete pBillDB;
+				pBillDB = NULL;
+			}
+
+			if(pApayBillDB)
+			{	
+				delete pApayBillDB;
+				pApayBillDB = NULL;
+			}
+
+			if(pApayConfDB)
+			{	
+				delete pApayConfDB;
+				pApayConfDB = NULL;
+			}
+
+			if (pApayDBPool)
+			{
+				delete pApayDBPool;
+				pApayDBPool = NULL;
+			}	
+
+			if(m_apaySocket)
+			{
+				delete m_apaySocket;
+				m_apaySocket = NULL;
+			}
+
+			if(m_IDSocket)
+			{
+				delete m_IDSocket;
+				m_IDSocket = NULL;
+			}
 #endif
 		}
 
@@ -65,6 +103,7 @@ class CSpeedPosConfig : public CObject
 
         INT32 InitLog();
 		INT32 InitOrderServer(CSpeedPosServer& order);
+		INT32 InitServer();
 
         INT32 InitDCReporter(DCReporter& reporter) {
             return reporter.Init(reporter_id_);
@@ -87,11 +126,25 @@ class CSpeedPosConfig : public CObject
 			return pBillDB;
 		}
 
+		clib_mysql* GetApayBillDB()
+		{
+			return pApayBillDB;
+		}
+
+		clib_mysql* GetApayConfDB()
+		{
+			return pApayConfDB;
+		}
+
 		CDBPool* GetDBPool()
 		{
 			return pDBPool;
 		}
 
+		CDBPool* GetApayDBPool()
+		{
+			return pApayDBPool;
+		}
 
 		clib_mysql* GetJumpOrderDB(const std::string& order_no)
 		{
@@ -108,6 +161,16 @@ class CSpeedPosConfig : public CObject
 		const std::string GetBillDbName()
 		{
 			return m_stBillDbName;
+		}
+
+		const std::string GetApayBillDbName()
+		{
+			return m_apayBillDbName;
+		}
+
+		const std::string GetApayConfDbName()
+		{
+			return m_apayConfDbName;
 		}
 
 		CBillBusiConfig* GetBillBusiConfig()
@@ -150,6 +213,27 @@ class CSpeedPosConfig : public CObject
             return is_sync_create_pay_log_;
         }
 
+		std::string GetRabbitMQKey()
+		{
+			return m_strQueueKey;
+		}
+
+		CRabbitMQClient* GetRabbitMQ()
+		{
+			return m_rabbitMqClient;
+		};
+
+		CSocket* GetApayServerSocket()
+		{
+			return m_apaySocket;
+		}
+
+		CSocket* GetIDServerSocket()
+		{
+			return m_IDSocket;
+		}
+
+
 private:
 #ifdef _SYBASE
         CSyBase* pBillDB;
@@ -159,12 +243,22 @@ private:
 
 		clib_mysql* pBillDB;
 
+		clib_mysql* pApayBillDB;
+
+		clib_mysql* pApayConfDB;
+
 		CDBPool* pDBPool;
+
+		CDBPool* pApayDBPool;
 #endif
 
 		string m_stShopDbName;
 
 		string m_stBillDbName;
+
+		string m_apayBillDbName;
+
+		string m_apayConfDbName;
 
 		CBillBusiConfig* pBusConfig;
 
@@ -187,15 +281,23 @@ private:
 		std::string m_strExchangName;
 		std::string m_strQueueName;
 		std::string m_strQueueKey;
+
+		CRabbitMQClient* m_rabbitMqClient;
         //extern interface
        
 
 		//tradeServer
         CommServer m_stTradeServer;
-        //serttle server
-        CommServer m_stSettleServer;
+        //idgen server
+        CommServer m_stIDServer;
+        CSocket* m_IDSocket;
         //bill server 在这里就是自已调用自已
         CommServer m_stBillServer;
+
+		
+		//agentpay_server
+		CommServer m_stApayServer;
+		CSocket* m_apaySocket;
 
 		
         //notify

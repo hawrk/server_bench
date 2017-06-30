@@ -21,6 +21,17 @@
 #include "CProcBillContrastTask.h"
 #include "speed_bill_protocol.h"
 #include "CProcSettleCallback.h"
+#include "CBillDownLoadManage.h"
+#include "CBillBatchManage.h"
+#include "CBillSummaryQry.h"
+#include "CBillAbnormalQry.h"
+#include "CSettleQryTask.h"
+
+#include "CAgentPayBillDealTask.h"
+#include "CAgentPayAbnormalQryTask.h"
+
+#include "CSettleAcctinfoModifyTask.h"
+#include "CAgentPayBillLogQryTask.h"
 
 //base::comm::DCReporter  g_DCReporter;
 
@@ -47,6 +58,24 @@ void RegTask()
 	REGISTER_TASK(ORDER_VER_1, CMD_SPEEDPOS_CONTRAST_BILL, CProcBillContrastTask);   //对账操作
 
 	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_SETTLE_CALLBACK,CProcSettleCallback);  //清分结果回调
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_BILL_DOWNLOAD,CBillDownLoadManage);  //对账单下载查询
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_BILL_BATCH,CBillBatchManage);
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_BILL_SUMMARY,CBillSummaryQry); //对账总览
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_BILL_ABNORMAL,CBillAbnormalQry); //对账总览
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_BILL_SETTLE_QRY,CSettleQryTask);  //结算查询
+	
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_APAY_BILL_DEAL,CAgentPayBillDealTask);  //代付对账处理
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_APAY_ABNOR_BILL_QRY,CAgentPayAbnormalQryTask);  //代付对账处理	
+
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_SETTLE_ACCTINFO_MODIFY,CSettleAcctinfoModifyTask);  //结算账户信息编辑
+
+    REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_APAY_BILL_LOG_QRY,CAPayBillLogQryTask);  //代付对账记录查询
 }
 
 // 初始化方法（可选实现）,返回0成功，非0失败
@@ -100,6 +129,16 @@ extern "C" int spp_handle_init(void* arg1, void* arg2)
                 CERROR_LOG("BillServer init Failed.Ret[%d] Err[%s]\n", iRet, g_cOrderServer.GetErrorMessage());
                 return -1;
             }
+
+		   // 初始化Server
+		   fprintf(stderr, "init Server...\n");
+		   iRet = pOrder_conf->InitServer();
+		   if (iRet != 0)
+		   {
+			   CERROR_LOG("Server init Failed.Ret[%d]\n", iRet);
+			   return -1;
+		   }
+
 
            /* fprintf(stderr, "init dc reporter...\n");
             iRet = pOrder_conf->InitDCReporter(g_DCReporter);

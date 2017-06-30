@@ -82,7 +82,7 @@ INT32 CSppClient::CallOrderQuery(const std::string& strOrderNo, SOrderInfoRsp& r
 }
 
 
-INT32 CSppClient::SendBillNotify(StringMap&parammap,SOrderInfoRsp& rsp)
+INT32 CSppClient::SendBillNotify(StringMap& parammap,SOrderInfoRsp& rsp)
 {
 	INT32 iRet = 0;
 	Reset();
@@ -97,18 +97,18 @@ INT32 CSppClient::SendBillNotify(StringMap&parammap,SOrderInfoRsp& rsp)
 //	mapSend["cmd"] = szTmp;
 //
 //	SET_INT(szTmp, 1);
-//	mapSend["src"] = szTmp;
+//	mapSend["src"] = szTmp; //
 
 
-	mapSend["ops"] 			= parammap["ops"];
-	mapSend["bkname"]   	= parammap["bkname"];
-	mapSend["bmid"] 		= parammap["bmid"];
-	mapSend["paychannel"] 	= parammap["paychannel"];
+	mapSend["cmd"] 			= parammap["cmd"];
+	mapSend["key"]   	= parammap["key"];
+	mapSend["iIdLen"] 		= parammap["iIdLen"];
+
 
 	//CDEBUG_LOG("begin to send,ops = [%s],bkname=[%s]",mapSend["ops"].c_str(),mapSend["bkname"].c_str());
 
 	iRet = m_cSocket.SendAndRecvLine(mapSend, mapRecv, "\r\n");
-	CDEBUG_LOG("iRet = [%d]",iRet);
+	CDEBUG_LOG("iRet = [%d],err=[%s]",iRet,m_szErrMsg);
 	m_cSocket.Close();
 	if (iRet != 0)
 	{

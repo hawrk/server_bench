@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <iconv.h>
+#include "json_util.h"
 
 using std::stringstream;
 using std::map;
@@ -277,6 +278,12 @@ void str_split(const std::string& strMain, char chSpliter,
 //int CopyFile(const char *SourceFile,const char *NewFile);
 
 int file_mmap(const std::string& map_file_name, vector<std::string>& vecBill);
+
+/*
+ * add hawrk
+ * map 需添加 的map对象，key：Json的Key值，value：Json的Value值
+ */
+void AddJsonMap(JsonMap& map,const char* key,const std::string& value);
 
 #endif
 

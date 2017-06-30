@@ -21,6 +21,7 @@
 #include "common.h"
 #include "CSybase.h"
 #include "spp_query_1.h"
+#include "tools.h"
 
 
 class CSyBase;

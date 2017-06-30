@@ -38,7 +38,7 @@ class CSpeedPosServer : public CObject
         CSpeedPosServer();
         virtual ~CSpeedPosServer();
 
-		INT32 Init(const CommServer& stTradeGenServer,const CommServer& stSettleGenServer);
+		INT32 Init(const CommServer& stTradeGenServer);
 
 
 		int CallGetBankNoApi(TRemitBill& remitBill);
@@ -74,6 +74,11 @@ class CSpeedPosServer : public CObject
 						std::string& responseStr);
 
 		int SendRequestDownload(const std::string strUrl, std::string& path);
+
+		int SendRequestTradeServapi(const std::string& sign_key,
+											const std::string& trade_serv_url,
+											StringMap& paramMap,
+											std::string& responseStr);
 
 		int ProcSftpDownLoad(const char * user,
 			const char * pwd,

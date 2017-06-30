@@ -26,7 +26,8 @@ using namespace std;
 #define SERVICE_REMARK_NAME		"기술 수수료"
 #define BM_REMARK_NAME		    "기관 수수료"
 #else
-#define  BILL_FILE_TABLE_HEAD                           "交易时间,平台订单号,第三方订单号,支付渠道交易号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,总手续费,商户结算金额,退款金额,平台退款单号,第三方退款单号,支付渠道退款单号,支付手续费,渠道总佣金,清分机构佣金,技术服务费"
+#define  BILL_FILE_TABLE_HEAD                           "交易时间,平台订单号,第三方订单号,支付渠道交易号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,总手续费,商户结算金额,退款金额,平台退款单号,第三方退款单号,支付渠道退款单号,支付手续费,渠道总佣金,清分机构佣金,技术服务费,\
+账单状态,货币类型,退款状态,商户名称,结算费率"
 #define  CHANNEL_BILL_FILE_TABLE_HEAD                   "交易时间,平台订单号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,退款金额,平台退款单号,渠道结算费率,渠道佣金"
 #define SHOP_REMARK_NAME		"商户收单"
 #define CHANNEL_REMARK_NAME		"渠道手续费"
@@ -148,7 +149,9 @@ typedef struct _STBillSrvMainConf
 	std::string   sAddBillContrastUrl;
 	std::string   sUpdateBillContrastUrl;
 	std::string   sAddExceptionOrderUrl;
+	std::string   sTradeServQryOrderUrl;
 	std::string   sApiKey;
+	std::string   sSignKey;
 
 
 	std::string   sCallNotifyIp;
@@ -186,9 +189,16 @@ typedef struct _tagProPullBillReq
 	std::string     sBmId;
 	std::string     sPayChannel;
 	std::string     sInputTime;
+	std::string     sEndTime;
 	std::string     sFileName;
 	std::string     sOrderType;
 	std::string     sStep;
+	std::string     sBankInscode;
+	std::string     sBillStatus;
+	std::string     sOperator;
+	std::string     sBatchNo;
+	int             page;
+	int             limit;
 	void Reset()
 	{
 		memset(&stHead, '\0', sizeof(CommHead));
@@ -196,9 +206,16 @@ typedef struct _tagProPullBillReq
 		sBmId = "";
 		sPayChannel = "";
 		sInputTime = "";
+		sEndTime = "";
 		sFileName = "";
 		sOrderType = "";
 		sStep = "";
+		sBankInscode = "";
+		sBillStatus = "";
+		sOperator = "";
+		sBatchNo = "";
+		page = 0;
+		limit = 0;
 	}
 }ProPullBillReq;
 
@@ -235,12 +252,15 @@ typedef struct _tagOrderFlowData
 	int     service_profit;
 	int     bm_profit;
 	int     pay_time;
+	int     shop_calc_rate;
 
 	std::string   order_no;
 	std::string   out_trade_no;
 	std::string   trade_type;
 	std::string   pay_channel;
 	std::string   transaction_id;
+	std::string   fee_type;
+	std::string   sub_body;
 
 	void Reset()
 	{
@@ -256,12 +276,15 @@ typedef struct _tagOrderFlowData
 		service_profit = 0;
 		bm_profit = 0;
 		pay_time = 0;
+		shop_calc_rate = 0;
 
 		order_no = "";
 		out_trade_no = "";
 		trade_type = "";
 		pay_channel = "";
 		transaction_id = "";
+		fee_type = "";
+		sub_body = "";
 	}
 }OrderFlowData;
 
@@ -273,6 +296,8 @@ typedef struct _tagOrderChannelFlowData
 	int channel_profit_rate;
 	int channel_profit;
 	int pay_time;
+	int total_count;
+	int refund_fee;
 
 	std::string order_no;
 
@@ -284,8 +309,9 @@ typedef struct _tagOrderChannelFlowData
 		channel_profit_rate = 0;
 		channel_profit = 0;
 		pay_time = 0;
-
+		total_count = 0;
 		order_no = "";
+		refund_fee = 0;
 	}
 }OrderChannelFlowData;
 
@@ -303,6 +329,7 @@ typedef struct _tagOrderRefundFlowData
 	int     refund_service_profit;
 	int     refund_bm_profit;
 	int     refund_time;
+	int     shop_calc_rate;
 
 	std::string    order_no;
 	std::string    refund_no;
@@ -310,6 +337,8 @@ typedef struct _tagOrderRefundFlowData
 	std::string    refund_id;
 	std::string    trade_type;
 	std::string    pay_channel;
+	std::string   fee_type;
+	std::string   sub_body;
 
 	void Reset()
 	{
@@ -325,6 +354,7 @@ typedef struct _tagOrderRefundFlowData
 		refund_service_profit = 0;
 		refund_bm_profit = 0;
 		refund_time = 0;
+		shop_calc_rate = 0;
 
 		order_no = "";
 		refund_no = "";
@@ -332,6 +362,9 @@ typedef struct _tagOrderRefundFlowData
 		refund_id = "";
 		trade_type = "";
 		pay_channel = "";
+		fee_type = "";
+		sub_body = "";
+
 	}
 
 }OrderRefundFlowData;
@@ -426,6 +459,7 @@ typedef struct _tagOrderStat{
 	int     channel_net_profit;
 	int     service_net_profit;
 	int     bm_net_profit;
+	int     shared_profit;  //分润金额
 
 	void  Reset()
 	{
@@ -443,8 +477,11 @@ typedef struct _tagOrderStat{
 		channel_net_profit = 0;
 		service_net_profit = 0;
 		bm_net_profit = 0;
+		shared_profit = 0;
 	}
 }OrderStat;
+
+
 
 //t+1 汇款单
 typedef struct _tagTRemitBill
@@ -464,6 +501,8 @@ typedef struct _tagTRemitBill
 	std::string		sRemitTime;
 	std::string     sRemark;
 	std::string     sPayRemark;
+	std::string     sShopName;  //商户名称
+	std::string     sCycle;  //结算周期
 
 	void Reset()
 	{
@@ -480,12 +519,15 @@ typedef struct _tagTRemitBill
 		sRemitTime = "";
 		sRemark = "";
 		sPayRemark = "";
+		sShopName = "";
+		sCycle = "";
 	}
 }TRemitBill;
 
 
 typedef struct _tagWxFlowSummary
 {
+	string     bm_id;
 	string     app_id;         // 商户id
 	std::string     mch_id;
 	std::string     sub_mch_id;
@@ -495,34 +537,36 @@ typedef struct _tagWxFlowSummary
 	string     order_status;
 	string     bank_type;
 	string     fee_type;
-	float     total_fee;
-	float     refund_fee;
+	long     total_fee;
+	long     refund_fee;
 	string     refund_id;
 	string     refund_no;
 	string     pay_time;//SUCCESS 就是支付时间  REFUND 就是退款时间
 	string     trade_type;
 	string     refund_status;
+	string     overflow_type;
 
 
-	void Reset()
-	{
-		pay_time = "";
-		app_id = "";
-		mch_id = "";
-		sub_mch_id = "";
-		order_no = "";
-		transaction_id = "";
-		openid = "";
-		order_status = "";
-		total_fee = 0.00;
-		refund_fee = 0.00;
-		refund_id = "";
-		refund_no = "";
-		trade_type = "";
-		refund_status = "";
-		bank_type = "";
-		fee_type = "";
-	}
+//	void Reset()
+//	{
+//		bm_id = "";
+//		pay_time = "";
+//		app_id = "";
+//		mch_id = "";
+//		sub_mch_id = "";
+//		order_no = "";
+//		transaction_id = "";
+//		openid = "";
+//		order_status = "";
+//		total_fee = 0.00;
+//		refund_fee = 0.00;
+//		refund_id = "";
+//		refund_no = "";
+//		trade_type = "";
+//		refund_status = "";
+//		bank_type = "";
+//		fee_type = "";
+//	}
 }WxFlowSummary;
 
 typedef struct _tagCommonResult
@@ -577,20 +621,43 @@ typedef struct _tagSOrderInfoRsp
 
 typedef struct _tagAliFlowSummary
 {
+	std::string     mch_id;
 	std::string     transaction_id;
 	std::string     order_no;
 	std::string     order_status;
 	std::string     refund_no;
 	std::string     pay_time;//SUCCESS 就是支付时间  REFUND 就是退款时间
+	std::string     overflow_type;
+	long            total_fee;
 
 	void Reset()
 	{
+		mch_id = "";
 		transaction_id = "";
 		order_no = "";
 		order_status = "";
 		refund_no = "";
 		pay_time = "";
+		overflow_type = "";
+		total_fee = 0;
 	}
 }AliFlowSummary;
+
+typedef struct _ApayBillSrvMainConf
+{
+	// 远程FTP 信息
+	string 		sFtpIp;
+	string 		sFtpUser;
+	string 		sFtpPass;
+	int         iSftpPort;
+
+	string      loadBillFileShPath;
+	string      loadBillFileShName;
+
+	string      MchBillFilePath;
+
+}ApayBillSrvMainConf;
+
+
 #endif
 

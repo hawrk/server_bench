@@ -164,50 +164,47 @@ INT32 CProcSettleCallback::CallSettle()
 	memory = mmap(NULL, file_length, PROT_READ, MAP_SHARED, fd, 0);
 	split_ex((char *)memory, '\n', vecBill);
 
-	int socket_fd = safe_tcp_connect_timeout(mainConfig.sCallNotifyIp.c_str(), mainConfig.iCallNotifyPort, 30);
-	if(socket_fd)
+	for(vector<std::string>::iterator it = vecBill.begin(); it != vecBill.end();it++)
 	{
-		for(vector<std::string>::iterator it = vecBill.begin(); it != vecBill.end();it++)
-		{
-			vector<string> vStr;
-			TRemitBill remitBill;
-			int status = 0;
-			//boost::split(vStr,(*it), boost::is_any_of( "," ), boost::token_compress_on );//token_compress_on此标志为多个空值时，压缩为一个值
-			boost::split(vStr,(*it), boost::is_any_of( "," ));
+		vector<string> vStr;
+		TRemitBill remitBill;
+		int status = 0;
+		//boost::split(vStr,(*it), boost::is_any_of( "," ), boost::token_compress_on );//token_compress_on此标志为多个空值时，压缩为一个值
+		boost::split(vStr,(*it), boost::is_any_of( "," ));
 
-			CDEBUG_LOG("parse line :[%s]",(*it).c_str());
+		CDEBUG_LOG("parse line :[%s]",(*it).c_str());
 
-			if(vStr.size() < 14)  //第一行为汇总数据的话，则跳过
-				continue;
+		if(vStr.size() < 14)  //第一行为汇总数据的话，则跳过
+			continue;
 
 //			for(vector<std::string>::iterator subit = vStr.begin();subit != vStr.end();subit ++)
 //			{
 //				CDEBUG_LOG("sub evec:[%s]",(*subit).c_str());
 //			}
-			//序号,交易日期,平台编号,平台类型,平台名称,开户名,银行卡号,卡类型(0:对私;1:对公),银行类型,网点号,结算金额(单位:元),结算时间,描述
-			remitBill.account_id = vStr[2];
-			remitBill.sType = vStr[3];
-			remitBill.sPayTime = vStr[1];
-			remitBill.sRemitTime = getSysDate();
-			status = (vStr[13] == "0000") ? 1:-2;
-			remitBill.sPayRemark = vStr[14];
+		//序号,交易日期,平台编号,平台类型,平台名称,开户名,银行卡号,卡类型(0:对私;1:对公),银行类型,网点号,结算金额(单位:元),结算时间,描述
+		remitBill.account_id = vStr[2];
+		remitBill.sType = vStr[3];
+		remitBill.sPayTime = vStr[1];
+		remitBill.sRemitTime = getSysDate();
+		status = (vStr[13] == "0000") ? 1:-2;
+		remitBill.sPayRemark = vStr[14];
 
-			iRet = g_cOrderServer.CallUpdateSettleLogApi(m_stReq.sBmId, m_stReq.sPayChannel, remitBill, status);
-			if (iRet < 0)
-			{
-				snprintf(m_szErrMsg, sizeof(m_szErrMsg), "CallUpdateSettleLogApi failed ! "
-					"Ret[%d]",
-					iRet);
-				CERROR_LOG("CallUpdateSettleLogApi failed! "
-					"Ret[%d].\n",
-					iRet);
-				return -3060;
-			}
+		iRet = g_cOrderServer.CallUpdateSettleLogApi(m_stReq.sBmId, m_stReq.sPayChannel, remitBill, status);
+		if (iRet < 0)
+		{
+			snprintf(m_szErrMsg, sizeof(m_szErrMsg), "CallUpdateSettleLogApi failed ! "
+				"Ret[%d]",
+				iRet);
+			CERROR_LOG("CallUpdateSettleLogApi failed! "
+				"Ret[%d].\n",
+				iRet);
+			return -3060;
 		}
-		//处理完成后，删除源目录的加密文件
-		std::string settle_file = settle_file_path + m_stReq.sFileName;
-		remove(settle_file.c_str());
 	}
+	//处理完成后，删除源目录的加密文件
+	std::string settle_file = settle_file_path + m_stReq.sFileName;
+	remove(settle_file.c_str());
+
 
 //	SOrderInfoRsp orderInfo;
 //	INT32 iRet = g_cOrderServer.getsppClent().CallOrderQuery(m_stReq.sOrderNo, orderInfo);

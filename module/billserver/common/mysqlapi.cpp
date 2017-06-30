@@ -1,5 +1,12 @@
 #include "mysqlapi.h"
 
+#define RET_HASREC     1
+#define RET_HASNOREC   0
+#define RET_FAIL      -1
+
+#define	NSTR	""
+
+
 CMySQL::CMySQL()
 {
 	m_iAffectedRows = 0;
@@ -14,9 +21,48 @@ void CMySQL::Reset()
 	m_iAffectedRows = 0;
 }
 
+void CMySQL::Begin(clib_mysql& sql_instance) throw(CTrsExp)
+{
+	int iRet = 0;
+	iRet = sql_instance.query("begin");
+    if (iRet != 0)
+    {
+		CERROR_LOG("Transaction Begin Failed! Ret[%d] Err[%u~%s]",
+            		iRet, sql_instance.get_errno(), sql_instance.get_error());
+		throw(CTrsExp(sql_instance.get_errno(), sql_instance.get_error()));
+    }
+	CDEBUG_LOG("Transaction Begin ...");
+}
+
+void CMySQL::Commit(clib_mysql& sql_instance) throw(CTrsExp)
+{
+	int iRet = 0;
+	iRet = sql_instance.query("commit");
+    if (iRet != 0)
+    {
+		CERROR_LOG("Transaction Commit Failed! Ret[%d] Err[%u~%s]",
+            		iRet, sql_instance.get_errno(), sql_instance.get_error());
+		throw(CTrsExp(sql_instance.get_errno(), sql_instance.get_error()));
+    }
+	CDEBUG_LOG("Transaction Commit success.");
+}
+
+void CMySQL::Rollback(clib_mysql& sql_instance) throw(CTrsExp)
+{
+	int iRet = 0;
+	iRet = sql_instance.query("rollback");
+    if (iRet != 0)
+    {
+		CERROR_LOG("Transaction Rollback Failed! Ret[%d] Err[%u~%s]",
+            		iRet, sql_instance.get_errno(), sql_instance.get_error());
+		throw(CTrsExp(sql_instance.get_errno(), sql_instance.get_error()));
+    }
+	CDEBUG_LOG("Transaction Rollback success.");
+}
+
 /**
- * Ö´ĞĞ²éÑ¯(×î¶à»ñÈ¡1Ìõ¼ÇÂ¼)
- * ·µ»Ø:  0:ÎŞ¼ÇÂ¼  1:ÓĞ¼ÇÂ¼
+ * æ‰§è¡ŒæŸ¥è¯¢(æœ€å¤šè·å–1æ¡è®°å½•)
+ * è¿”å›:  0:æ— è®°å½•  1:æœ‰è®°å½•
  */
 int CMySQL::QryAndFetchResMap(clib_mysql& sql_instance, 
 						       const char * sql_str, 
@@ -44,7 +90,7 @@ int CMySQL::QryAndFetchResMap(clib_mysql& sql_instance,
 
     if (sql_instance.num_rows() <= 0)
     {
-        // Êı¾İ²»´æÔÚ
+        // æ•°æ®ä¸å­˜åœ¨
         return RET_HASNOREC;
     }
 
@@ -80,8 +126,8 @@ int CMySQL::QryAndFetchResMap(clib_mysql& sql_instance,
 }
 
 /**
- * Ö´ĞĞ²éÑ¯(»ñÈ¡¶àÌõ¼ÇÂ¼)
- * ·µ»Ø:  0:ÎŞ¼ÇÂ¼  1:ÓĞ¼ÇÂ¼
+ * æ‰§è¡ŒæŸ¥è¯¢(è·å–å¤šæ¡è®°å½•)
+ * è¿”å›:  0:æ— è®°å½•  1:æœ‰è®°å½•
  */
 int CMySQL::QryAndFetchResMVector(clib_mysql& sql_instance, 
 									 const char * sql_str, 
@@ -144,8 +190,8 @@ int CMySQL::QryAndFetchResMVector(clib_mysql& sql_instance,
 }
 
 /**
- * Ö´ĞĞ²åÈë¡¢¸üĞÂ
- * ·µ»Ø:  1:³É¹¦
+ * æ‰§è¡Œæ’å…¥ã€æ›´æ–°
+ * è¿”å›:  1:æˆåŠŸ
  */
 int CMySQL::Execute(clib_mysql& sql_instance, const char * sql_str)
 	throw(CTrsExp)
@@ -172,5 +218,17 @@ char * CMySQL::ValiStr(char *str)
 		return (char *)NSTR;
 	else
 		return str;
+}
+
+// è½¬ä¹‰
+string
+CMySQL::EscapeStr(const string & buff)
+{
+    int len = buff.length();
+    char szTmp[len*2 + 1];
+    memset(szTmp, 0, sizeof(szTmp));
+    mysql_escape_string(szTmp, buff.c_str(), buff.length());
+    
+    return string(szTmp);
 }
 

@@ -102,6 +102,16 @@ INT32 CBillContrastBase::NotifySettleServer(ProPullBillReq& m_stReq)
 	return 0;
 }
 
+void CBillContrastBase::InitBillFileDownLoad(ProPullBillReq& m_Req,int starttime)
+{
+	//do nothing
+}
+
+void CBillContrastBase::ProcException(ProPullBillReq& m_stReq,int starttime,int exce_type)
+{
+	//do nothing
+}
+
 void CBillContrastBase::CheckBillFill(ProPullBillReq& m_Req,int starttime)
 {
 	BEGIN_LOG(__func__);
@@ -139,13 +149,13 @@ void CBillContrastBase::CheckBillFill(ProPullBillReq& m_Req,int starttime)
 	std::string strFileName, strCipherFileName;
 	if (0 == strcmp(m_Req.sPayChannel.c_str(), WX_API_PAY_CHANNEL))
 	{
-		strFileName = p_bank_attr->strBankType + "_WXPAYZF" + nowdate(m_Req.sInputTime) + ".csv";
-		strCipherFileName = p_bank_attr->strBankType + "_WXPAYZF" + nowdate(m_Req.sInputTime) + ".SRC";
+		strFileName = p_bank_attr->strBankType + "_WXPAYZF" + getSysDate(starttime) + ".csv";
+		strCipherFileName = p_bank_attr->strBankType + "_WXPAYZF" + getSysDate(starttime) + ".SRC";
 	}
 	else if (0 == strcmp(m_Req.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
 	{
-		strFileName = p_bank_attr->strBankType + "_ALIPAYZF" + nowdate(m_Req.sInputTime) + ".csv";
-		strCipherFileName = p_bank_attr->strBankType + "_ALIPAYZF" + nowdate(m_Req.sInputTime) + ".SRC";
+		strFileName = p_bank_attr->strBankType + "_ALIPAYZF" + getSysDate(starttime) + ".csv";
+		strCipherFileName = p_bank_attr->strBankType + "_ALIPAYZF" + getSysDate(starttime) + ".SRC";
 	}
 	pSettleFile = new CBillFile(strsrcPath.c_str(), strFileName.c_str());
 	pSettleCipherFile = new CBillFile(strEncryptPath.c_str(), strCipherFileName.c_str());
@@ -163,7 +173,7 @@ void CBillContrastBase::CheckBillFill(ProPullBillReq& m_Req,int starttime)
 			iRet);
 		throw(CTrsExp(ERR_BILL_FILE_EXIST,errMap[ERR_BILL_FILE_EXIST]));
 	}
-
+	//bm 下的目录文件校验
 	std::string sShopBillSrcFillPath = mainConfig.sSftpBillPath + m_Req.sBmId + "/" + SRC_PATH +
 			mainConfig.sSftMchBillFilePrefix;
 	std::string sChannelBillSrcFillPath = mainConfig.sSftpBillPath + m_Req.sBmId + "/" + SRC_PATH +
@@ -177,8 +187,6 @@ void CBillContrastBase::CheckBillFill(ProPullBillReq& m_Req,int starttime)
 	pBillChannelFille 	= new CBillFile(sChannelBillSrcFillPath.c_str(), starttime);
 	pBillWxFile 		= new CBillFile(sWxBillSrcFillPath.c_str(), starttime);
 	pBillAliFile 		= new CBillFile(sAliBillDecFilePath.c_str(), starttime);
-	CDEBUG_LOG("pBillShopFille =[%s]",pBillShopFille->GetFileName().c_str());
-
 
 	sShopBillSrcFileName 	= sShopBillSrcFillPath + "_" + getSysDate(starttime) + ".csv";
 	sChannelBillSrcFileName = sChannelBillSrcFillPath + "_" + getSysDate(starttime) + ".csv";
@@ -201,17 +209,6 @@ void CBillContrastBase::CheckBillFill(ProPullBillReq& m_Req,int starttime)
 		}
 	}
 
-	//初始化对账步骤
-	//TODO:
-//	iRet = g_cOrderServer.CallAddBillContrastApi(m_Req.sBmId, m_Req.sPayChannel, toDate(getSysDate(starttime)),
-//				BILL_CONTRAST_STEP_BEGIN_ING,
-//				stepMap[BILL_CONTRAST_STEP_BEGIN_ING]);
-//	if (iRet < 0)
-//	{
-//		CERROR_LOG("CallAddBillContrastApi failed!iRet =[%d]", iRet);
-//		throw(CTrsExp(ERR_UPDATE_BILL_STATUS,errMap[ERR_UPDATE_BILL_STATUS]));
-//
-//	}
 
 }
 
@@ -219,16 +216,6 @@ void CBillContrastBase::Copy2GetFile(ProPullBillReq& m_Req,int starttime)
 {
 	BEGIN_LOG(__func__);
 	CDEBUG_LOG("Copy2GetFile begin");
-	INT32 iRet = 0;
-	//同步对账步骤
-	//TODO
-	iRet = g_cOrderServer.CallUpdateBillContrastApi(m_Req.sBmId, m_Req.sPayChannel, toDate(getSysDate(starttime)), BILL_CONTRAST_STEP_BEGIN_SFTP_DOWNLOAD,
-													stepMap[BILL_CONTRAST_STEP_BEGIN_SFTP_DOWNLOAD]);
-	if (iRet < 0)
-	{
-		CERROR_LOG("CallAddBillContrastApi failed!iRet =[%d]", iRet);
-		throw(CTrsExp(ERR_ORDER_NO_MAPPING_EXIST,errMap[ERR_ORDER_NO_MAPPING_EXIST]));
-	}
 
 	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
 
@@ -255,6 +242,8 @@ void CBillContrastBase::Copy2GetFile(ProPullBillReq& m_Req,int starttime)
 	{
 		tars::TC_File::copyFile(strSftpAliLongRangPath,sAliBillSrcFileName,true);
 	}
+
+	TrimBillFile(m_Req);
 }
 
 void CBillContrastBase::SFTPDownLoad(ProPullBillReq& m_Req,int starttime)
@@ -262,15 +251,6 @@ void CBillContrastBase::SFTPDownLoad(ProPullBillReq& m_Req,int starttime)
 	BEGIN_LOG(__func__);
 	CDEBUG_LOG("SFTPDownLoad begin");
 	INT32 iRet = 0;
-	//同步对账步骤
-	//TODO
-//	iRet = g_cOrderServer.CallUpdateBillContrastApi(m_Req.sBmId, m_Req.sPayChannel, toDate(getSysDate(starttime)), BILL_CONTRAST_STEP_BEGIN_SFTP_DOWNLOAD,
-//													stepMap[BILL_CONTRAST_STEP_BEGIN_SFTP_DOWNLOAD]);
-//	if (iRet < 0)
-//	{
-//		CERROR_LOG("CallAddBillContrastApi failed!iRet =[%d]", iRet);
-//		throw(CTrsExp(ERR_ORDER_NO_MAPPING_EXIST,errMap[ERR_ORDER_NO_MAPPING_EXIST]));
-//	}
 
 	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
 
@@ -285,30 +265,21 @@ void CBillContrastBase::SFTPDownLoad(ProPullBillReq& m_Req,int starttime)
 
 	CDEBUG_LOG("use sftp to get file..\n");
 	//先删除原来的文件
-	std::string strSftpMchPath = mainConfig.sSftpBillPath + m_Req.sBmId + "/" + SRC_PATH + mainConfig.sSftMchBillFilePrefix
-		+ "_" + getSysDate(starttime) + ".csv";
-	std::string strSftpChannelPath = mainConfig.sSftpBillPath + m_Req.sBmId + "/" + SRC_PATH + mainConfig.sSftChannelBillFilePrefix
-		+ "_" + getSysDate(starttime) + ".csv";
-	std::string strSftpWxPath = mainConfig.sSftpBillPath + m_Req.sBmId + "/" + SRC_PATH +  mainConfig.sSftWXBillFilePrefix
-		+ "_" + getSysDate(starttime) + ".csv";
-	std::string strSftpAliPath = mainConfig.sSftpBillPath + m_Req.sBmId + "/" + SRC_PATH + mainConfig.sSftAliBillFilePrefix
-		+ "_" + getSysDate(starttime) + ".csv";
-
-	if(access(strSftpMchPath.c_str(),F_OK) == 0)
+	if(access(sShopBillSrcFileName.c_str(),F_OK) == 0)
 	{
-		remove(strSftpMchPath.c_str());
+		remove(sShopBillSrcFileName.c_str());
 	}
-	if(access(strSftpChannelPath.c_str(),F_OK) == 0)
+	if(access(sChannelBillSrcFileName.c_str(),F_OK) == 0)
 	{
-		remove(strSftpChannelPath.c_str());
+		remove(sChannelBillSrcFileName.c_str());
 	}
-	if(access(strSftpWxPath.c_str(),F_OK) == 0)
+	if(access(sWxBillSrcFileName.c_str(),F_OK) == 0)
 	{
-		remove(strSftpWxPath.c_str());
+		remove(sWxBillSrcFileName.c_str());
 	}
-	if(access(strSftpAliPath.c_str(),F_OK) == 0)
+	if(access(sAliBillSrcFileName.c_str(),F_OK) == 0)
 	{
-		remove(strSftpAliPath.c_str());
+		remove(sAliBillSrcFileName.c_str());
 	}
 	//delete end
 	//pBillShopFille->_open();
@@ -396,6 +367,53 @@ void CBillContrastBase::SFTPDownLoad(ProPullBillReq& m_Req,int starttime)
 //				pAliToUtf->raw("%s\n", szToUtf);
 //			}
 	}
+
+	TrimBillFile(m_Req);
+}
+
+void CBillContrastBase::TrimBillFile(ProPullBillReq& m_stReq)
+{
+	//清除原始对账单的一些垃圾字段
+	CDEBUG_LOG("trim bill file begin");
+	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
+
+	std::string sPath = mainConfig.sSftpShellPath;
+	CDEBUG_LOG("sPath : [%s] \n", sPath.c_str());
+
+	//system bill
+	char szLoadOrderFlowCmd[512] = { 0 };
+	snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s%s %s shop",
+		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(),sShopBillSrcFileName.c_str());
+	CDEBUG_LOG("szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
+	system(szLoadOrderFlowCmd);
+
+	//channel bill
+	char szLoadOrderChannelFlowCmd[512] = { 0 };
+	snprintf(szLoadOrderChannelFlowCmd, sizeof(szLoadOrderChannelFlowCmd), "sh %s%s %s channel",
+		sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(),  sChannelBillSrcFileName.c_str());
+	CDEBUG_LOG("LoadOrderChannelFlowCmd:[%s] \n", szLoadOrderChannelFlowCmd);
+	system(szLoadOrderChannelFlowCmd);
+
+	//wx
+	if (0 == strcmp(m_stReq.sPayChannel.c_str(), WX_API_PAY_CHANNEL))
+	{
+		char szLoadWxFlowCmd[512] = { 0 };
+		snprintf(szLoadWxFlowCmd, sizeof(szLoadWxFlowCmd), "sh %s%s %s wx %s",
+			sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(), sWxBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
+		CDEBUG_LOG("LoadWxFlowCmd:[%s] \n", szLoadWxFlowCmd);
+		system(szLoadWxFlowCmd);
+	}
+
+	//ali
+	if (0 == strcmp(m_stReq.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
+	{
+		char szLoadAliFlowCmd[512] = { 0 };
+		snprintf(szLoadAliFlowCmd, sizeof(szLoadAliFlowCmd), "sh %s%s %s ali %s",
+			sPath.c_str(), mainConfig.sBillFileToDBShellPath.c_str(),sAliBillSrcFileName.c_str(), m_stReq.sBmId.c_str());
+		CDEBUG_LOG("szLoadAliFlowCmd:[%s] \n", szLoadAliFlowCmd);
+		system(szLoadAliFlowCmd);
+	}
+
 }
 
 void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
@@ -417,6 +435,7 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 	std::map<std::string, OrderRefundBillSumary>::iterator itRefund;
 	for (std::map<std::string, OrderPayBillSumary>::iterator iter = orderPayBillMap.begin();
 		iter != orderPayBillMap.end(); ++iter)
+	//for(auto iter : orderPayBillMap)
 	{
 		OrderStat orderStat;
 		orderStat.Reset();
@@ -469,16 +488,16 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 
 
 	CDEBUG_LOG("bill channel trade num:[%d],refund num:[%d]",channelPayMap.size(),channelRefundMap.size());
-	std::map<std::string, int>::iterator it_refund;
-	for (std::map<std::string, int>::iterator iterCl = channelPayMap.begin(); iterCl != channelPayMap.end(); ++iterCl)
+	std::map<std::string, OrderChannelFlowData>::iterator it_refund;
+	for (std::map<std::string, OrderChannelFlowData>::iterator iterCl = channelPayMap.begin(); iterCl != channelPayMap.end(); ++iterCl)
 	{
 		std::string channel_id = iterCl->first;
-		int channel_profit = iterCl->second;
+		int channel_profit = iterCl->second.channel_profit;
 		CDEBUG_LOG("pay channel_id:[%s] channel_profit[%d]\n", channel_id.c_str(), channel_profit);
 		if ((it_refund = channelRefundMap.find(channel_id)) != channelRefundMap.end())
 		{
-			CDEBUG_LOG("refund channel_id:[%s] channel_profit[%d]\n", channel_id.c_str(), it_refund->second);
-			channel_profit -= it_refund->second;
+			CDEBUG_LOG("refund channel_id:[%s] channel_profit[%d]\n", channel_id.c_str(), it_refund->second.channel_profit);
+			channel_profit -= it_refund->second.channel_profit;
 		}
 		if (channel_profit > 0)
 		{

@@ -59,6 +59,8 @@ const int ERR_THIRT_ORDERNO_ALREADY_EXISTS = 12001; //第三方订单号已存�
 
 const int ERR_CREATE_ORDER = 12002; //创建订单失败
 
+/* bill settle error */
+const int ERR_BILL_SETTLE_NOT_EXIST = 13001; //结算单不存在
 
 const int ERR_ORDER_TOTALNET_IS_NOT_ENOUGH_TO_REFUND = -650;
 
@@ -124,6 +126,10 @@ const int ERR_DOWNLOAD_FILE            = -9906;    //对账文件下载失败
 const int ERR_QUERY_RECORD_ERR         = -9907;    //查询记录失败
 const int ERR_GET_FAILBILL_ERR         = -9908;    //获取未打款记录失败
 const int ERR_BANK_TYPE                = -9909;    //不支持此银行请求
+const int ERR_DOWNLOAD_FILE_EXIST      = -9910;    //对账文件已存在
+const int ERR_DB_UPDATE                = -9911;    //数据更新失败
+const int ERR_BILL_BATCH_EXIST         = -9912;    //正在对账中
+const int ERR_DB_INSERT                = -9913;    //数据写入失败
 
 #ifdef  _KOREA_VER
 class ErrParamMap : public std::map<int, std::string>
@@ -325,6 +331,12 @@ public:
 		this->insert(std::make_pair(ERR_GET_FAILBILL_ERR,"获取未打款记录失败"));
 
 		this->insert(std::make_pair(ERR_BANK_TYPE,"不支持此银行请求"));
+
+		this->insert(std::make_pair(ERR_DOWNLOAD_FILE_EXIST,"对账文件已下载成功！"));
+
+		this->insert(std::make_pair(ERR_DB_UPDATE,"数据更新失败！"));
+
+		this->insert(std::make_pair(ERR_BILL_BATCH_EXIST,"对账记录已存在！"));
 	}
 
 	virtual ~ErrParamMap()

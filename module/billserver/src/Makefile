@@ -27,7 +27,7 @@ HIREDIS_ROOT=../../Base/third_party/hiredis
 BOOST_ROOT=../../Base/third_party/boost
 SSH2_ROOT=../../Base/third_party/ssh
 COMM_ROOT=../../Base/Comm
-
+RABBITMQ_ROOT=../../Base/third_party/rabbitmq
 
 #plugin info
 LIBNAME = libbillproc
@@ -68,7 +68,10 @@ LDFLAGS	:= -shared -fPIC
 OBJS := order_spp_main.o CBillBusiConfig.o  CSpeedPosConfig.o \
 		CSpeedPosServer.o openapi_client.o  CSppClient.o \
 		BankFactory.o CBillConstrastBase.o CBillConstrastCommon.o \
-		CProcBillContrastTask.o CProcSettleCallback.o  CPayTransactionFlowDao.o CProcPushSysBillTask.o \
+		CProcBillContrastTask.o CProcSettleCallback.o  CPayTransactionFlowDao.o \
+		CProcPushSysBillTask.o  CBillConstrastSPDB.o CBillDownLoadManage.o CBillBatchManage.o\
+		CBillSummaryQry.o CBillAbnormalQry.o CSettleQryTask.o CSettleAcctinfoModifyTask.o\
+		CAgentPayBase.o CRabbitMQClient.o CAgentPayBillDealTask.o CAgentPayAbnormalQryTask.o CAgentPayBillLogQryTask.o\
 		$(COMM)/md5c.o $(COMM)/log/clog.o\
 		$(COMM)/config/HttpConfig.o $(COMM)/config/ServerConfig.o\
 		$(COMM)/svr/SvrClient.o 
@@ -82,6 +85,7 @@ LIBS		:= -L$(LIB_HOME) -lxmlParser -lqos_client -lttc -lmsglog -ldnscli -lrt -lp
 	           $(TINYXML_ROOT)/lib64/libtinyxml2.a \
 			   -L$(SSH2_ROOT)/lib -lssh2 \
 			   -L$(BOOST_ROOT)/lib/ -lboost_context -lboost_thread -lboost_system \
+               -L$(RABBITMQ_ROOT)/lib -lrabbitmq\
 
 $(TARGET) : $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)

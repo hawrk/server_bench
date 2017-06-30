@@ -26,6 +26,8 @@ public:
 
 	virtual void CheckBillFill(ProPullBillReq& m_Req,int starttime);
 
+
+	virtual void InitBillFileDownLoad(ProPullBillReq& m_Req,int starttime);
     /*
      * @brief 下载对账单
      */
@@ -66,6 +68,9 @@ public:
 	virtual INT32 NotifySettleServer(ProPullBillReq& m_stReq);
 
 
+	virtual void ProcException(ProPullBillReq& m_stReq,int starttime,int exce_type = 0);
+
+
 	/*
 	 * @brief 使用SFTP方式下载
 	 */
@@ -75,6 +80,12 @@ public:
 	 * @brief 直接复制
 	 */
 	void Copy2GetFile(ProPullBillReq& m_Req,int starttime);
+
+	/*
+	 * @brief trim billfile
+	 */
+	void TrimBillFile(ProPullBillReq& m_stReq);
+
 
 protected:
 
@@ -107,8 +118,8 @@ protected:
 	std::map<int, TRemitBill> tremitMap;
 	std::map<std::string, OrderPayBillSumary> orderPayBillMap;
 	std::map<std::string, OrderRefundBillSumary> orderRefundBillMap;
-	std::map<std::string, int> channelPayMap;
-	std::map<std::string, int> channelRefundMap;
+	std::map<std::string, OrderChannelFlowData> channelPayMap;
+	std::map<std::string, OrderChannelFlowData> channelRefundMap;
 
 };
 

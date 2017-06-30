@@ -769,3 +769,9 @@ int file_mmap(const std::string& map_file_name, vector<std::string>& vecBill)
 	return 0;
 }
 
+void AddJsonMap(JsonMap& map,const char* key,const std::string& value)
+{
+	map.insert(JsonMap::value_type(JsonType(key), JsonType(value)));
+
+}
+

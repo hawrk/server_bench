@@ -55,54 +55,124 @@ INT32 CProcBillContrastTask::Execute( NameValueMap& mapInput, char** outbuf, int
         BuildResp(outbuf, outlen);
         return m_iRetCode;
     }
-    try
-    {
-    	if(m_stReq.sStep.empty())
+
+	if(m_stReq.sStep.empty())
+	{
+		m_stReq.sStep = "0";
+	}
+
+	CalcEffectiveTimeBill();
+
+	CBillBusiConfig* pBillBusConfig;
+
+	pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig();
+	const CBillBusiConfig::BankAttr* p_bank_attr = pBillBusConfig->GetBankAttrCfg(m_stReq.sBmId);
+
+	if (!p_bank_attr)
+	{
+		CDEBUG_LOG("BmId [%s] has no config!!!.\n",m_stReq.sBmId.c_str());
+		m_stResp.err_code = ERR_CONFIG_NOT_FOUND;
+		m_stResp.err_msg = errMap[ERR_CONFIG_NOT_FOUND];
+		BuildResp(outbuf, outlen);
+		return m_stResp.err_code;
+	}
+
+	CBankFactory bankfactory;
+	CBillContrastBase *contrastbase = NULL;
+
+	contrastbase = bankfactory.CreateBankFactory(p_bank_attr->strBankType);
+
+	if(NULL == contrastbase)
+	{
+		CDEBUG_LOG("unknown bank type!!!!!!");
+		m_stResp.err_code = ERR_BANK_TYPE;
+		m_stResp.err_msg = errMap[ERR_BANK_TYPE];
+		BuildResp(outbuf, outlen);
+		return m_stResp.err_code;
+	}
+
+	auto_ptr<CBillContrastBase> billcontrast(contrastbase);
+
+	try
+	{
+    	if(p_bank_attr->strBankType == "ABC")
     	{
-    		m_stReq.sStep = "1";
+    		billcontrast->CheckBillFill(m_stReq,m_iBillBeginTime);
+
+        	switch (atoi(m_stReq.sStep.c_str()))
+        	{
+        	case 1:
+        		billcontrast->InitBillFileDownLoad(m_stReq,m_iBillBeginTime);
+            	billcontrast->BillFileDownLoad(m_stReq,m_iBillBeginTime);
+            	break;
+
+        	case 2:
+            	billcontrast->LoadBillFlowToDB(m_stReq,m_iBillBeginTime);
+        		billcontrast->ProcBillComparison(m_stReq,m_iBillBeginTime,m_iBillEndTime);
+        		break;
+
+        	case 3:
+        		billcontrast->GetRemitBillData(m_stReq,m_iBillBeginTime,m_iBillEndTime);
+        		billcontrast->ProRemitBillProcess(m_stReq,m_iBillBeginTime);
+        		break;
+
+        	case 4:
+        		billcontrast->UpdateBillStatus(m_stReq,m_iBillBeginTime);
+        		break;
+
+    		default:
+    			throw CTrsExp(ERR_PARAM_INVALID,errMap[ERR_PARAM_INVALID]);
+        	}
     	}
-
-    	CalcEffectiveTimeBill();
-
-    	CBillBusiConfig* pBillBusConfig;
-
-    	pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig();
-    	const CBillBusiConfig::BankAttr* p_bank_attr = pBillBusConfig->GetBankAttrCfg(m_stReq.sBmId);
-
-    	CBankFactory bankfactory;
-    	CBillContrastBase *contrastbase = NULL;
-
-    	contrastbase = bankfactory.CreateBankFactory(p_bank_attr->strBankType);
-
-    	if(NULL == contrastbase)
+    	else if(p_bank_attr->strBankType == "SPDB")
     	{
-    		CERROR_LOG("unknown bank type!!!!!!");
-			throw CTrsExp(ERR_BANK_TYPE,errMap[ERR_BANK_TYPE]);
+    		billcontrast->CheckBillFill(m_stReq,m_iBillBeginTime);
+
+    		if(m_stReq.sStep == "1"||m_stReq.sStep == "0")
+    		{
+
+				billcontrast->InitBillFileDownLoad(m_stReq,m_iBillBeginTime);
+				billcontrast->BillFileDownLoad(m_stReq,m_iBillBeginTime);
+
+    		}
+    		if(m_stReq.sStep == "2"||m_stReq.sStep == "0")
+    		{
+    			try
+    			{
+                	billcontrast->LoadBillFlowToDB(m_stReq,m_iBillBeginTime);
+            		billcontrast->ProcBillComparison(m_stReq,m_iBillBeginTime,m_iBillEndTime);
+
+            		billcontrast->GetRemitBillData(m_stReq,m_iBillBeginTime,m_iBillEndTime);
+            		billcontrast->ProRemitBillProcess(m_stReq,m_iBillBeginTime);
+            		billcontrast->UpdateBillStatus(m_stReq,m_iBillBeginTime);
+    			}
+    			catch(CTrsExp& e)
+    			{
+    				if(atoi(e.retcode.c_str()) != ERR_BILL_BATCH_EXIST)
+    				{
+    					billcontrast->ProcException(m_stReq,m_iBillBeginTime,1);
+
+    					throw(CTrsExp(ERR_BILL_CONTRAST_MODE,e.retmsg));
+    				}
+    				else
+    				{
+    					throw(CTrsExp(ERR_BILL_CONTRAST_MODE,e.retmsg));
+    				}
+    			}
+
+    		}
+
     	}
-
-    	auto_ptr<CBillContrastBase> billcontrast(contrastbase);
-
-
-    	switch (atoi(m_stReq.sStep.c_str()))
+    	else  //泰山农商行，海峡银行
     	{
-    		//完整 流程，不要加break
-    	case 1:
-        	billcontrast->CheckBillFill(m_stReq,m_iBillBeginTime);
-        	billcontrast->BillFileDownLoad(m_stReq,m_iBillBeginTime);
+    		billcontrast->CheckBillFill(m_stReq,m_iBillBeginTime);
+			billcontrast->InitBillFileDownLoad(m_stReq,m_iBillBeginTime);
+			billcontrast->BillFileDownLoad(m_stReq,m_iBillBeginTime);
         	billcontrast->LoadBillFlowToDB(m_stReq,m_iBillBeginTime);
-
-    	case 2:
-    		billcontrast->ProcBillComparison(m_stReq,m_iBillBeginTime,m_iBillEndTime);
-
-    	case 3:
+        	billcontrast->ProcBillComparison(m_stReq,m_iBillBeginTime,m_iBillEndTime);
     		billcontrast->GetRemitBillData(m_stReq,m_iBillBeginTime,m_iBillEndTime);
     		billcontrast->ProRemitBillProcess(m_stReq,m_iBillBeginTime);
-
-    	case 4:
     		billcontrast->UpdateBillStatus(m_stReq,m_iBillBeginTime);
-    		break;
-		default:
-			throw CTrsExp(ERR_PARAM_INVALID,errMap[ERR_PARAM_INVALID]);
     	}
     }
     catch(CTrsExp& e)
@@ -116,8 +186,7 @@ INT32 CProcBillContrastTask::Execute( NameValueMap& mapInput, char** outbuf, int
     	{
     		m_stResp.err_code = atoi(e.retcode.c_str());
     		m_stResp.err_msg = e.retmsg;
-    		g_cOrderServer.CallUpdateBillContrastApi(m_stReq.sBmId, m_stReq.sPayChannel, getSysDate(m_iBillBeginTime),
-    			0, "", -1);
+    		billcontrast->ProcException(m_stReq,m_iBillBeginTime);
     	}
 		BuildResp(outbuf, outlen);
 		CDEBUG_LOG("------------exception process end----------");
@@ -127,16 +196,17 @@ INT32 CProcBillContrastTask::Execute( NameValueMap& mapInput, char** outbuf, int
     {
 		m_stResp.err_code = -1;
 		m_stResp.err_msg = "Unknown Exception";
-		g_cOrderServer.CallUpdateBillContrastApi(m_stReq.sBmId, m_stReq.sPayChannel, getSysDate(m_iBillBeginTime),
-			0, "", -1);
+
+		billcontrast->ProcException(m_stReq,m_iBillBeginTime);
+
 		BuildResp(outbuf, outlen);
 		CDEBUG_LOG("------------exception process end----------");
 		return m_stResp.err_code;
     }
     if(iRet < 0)
     {
-		g_cOrderServer.CallUpdateBillContrastApi(m_stReq.sBmId, m_stReq.sPayChannel, getSysDate(m_iBillBeginTime),
-			0, "", -1);
+    	billcontrast->ProcException(m_stReq,m_iBillBeginTime);
+
 		m_stResp.err_code = iRet;
 		m_stResp.err_msg = errMap[iRet].empty() ? "对账失败" : errMap[iRet];
 		BuildResp( outbuf, outlen );
@@ -217,6 +287,8 @@ INT32 CProcBillContrastTask::FillReq( NameValueMap& mapInput)
 	FETCH_STRING_STD_EX_EX(mapInput, m_stReq.sInputTime, "INPUT_TIME", "");
 
 	FETCH_STRING_STD_EX_EX(mapInput,m_stReq.sStep,"STEP","");
+
+	FETCH_STRING_STD_EX_EX(mapInput, m_stReq.sOperator, "OPERATOR_ID", "");
 
     snprintf( m_szLogMessage, sizeof(m_szLogMessage),
               "CProcBillContrastTask : ver[%d] cmd[%d] ip[%s] src[%d] version[%s] "

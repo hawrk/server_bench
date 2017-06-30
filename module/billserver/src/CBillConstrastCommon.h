@@ -9,6 +9,7 @@
 #define _CBILLCONTRASTCOMMON_H_
 
 #include "CBillConstrastBase.h"
+#include "apayErrorNo.h"
 
 class CBillContrastCommon : public CBillContrastBase
 {
@@ -25,6 +26,10 @@ public:
 	virtual void ProcBillComparison(ProPullBillReq& m_stReq,int starttime,int endtime);
 
 	virtual void UpdateBillStatus(ProPullBillReq& m_stReq,int starttime);
+
+	virtual void InitBillFileDownLoad(ProPullBillReq& m_Req,int starttime);
+
+	virtual void ProcException(ProPullBillReq& m_stReq,int starttime,int exce_type = 0);
 
 protected:
 	clib_mysql* pBillDb;

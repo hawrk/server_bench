@@ -73,6 +73,7 @@ string OpenapiClient::invoke(const string &method, const string &content, const 
     requestPairs.insert(StringMap::value_type(OpenapiClient::KEY_SIGN, sign));
 
     wholeContent = buildContent(requestPairs);
+    CDEBUG_LOG("Send URL : %s\n", url.c_str());
 	CDEBUG_LOG("Request : %s\n", wholeContent.c_str());
     HttpClient httpClient;
     string responseStr = httpClient.sendSyncRequest(url, requestPairs);

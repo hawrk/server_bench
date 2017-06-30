@@ -87,13 +87,13 @@ extern int  spp_bill_Insert_Update_Del( int i_cmd, T_STSYBASE_IN_PARAM* in_param
 
 extern int  spp_bill_Transaction(int i_cmd,T_STSYBASE_IN_PARAM* in_param,char* wxdel_sql,char* alidel_sql,char* wx_channdel_sql,char* ali_channdel_sql,int* _count);
 
-extern int  spp_bill_GetPayBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetPayBillData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count);
+extern int  spp_bill_GetPayBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetPayBillData_Resp *pT_SPP_BILL,char* str_sql,int _count);
 
-extern int  spp_bill_GetRefundBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetRefundBillData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count);
+extern int  spp_bill_GetRefundBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetRefundBillData_Resp *pT_SPP_BILL,char* str_sql,int _count);
 
-extern int  spp_bill_GetChannelBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetChannelBillData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count);
+extern int  spp_bill_GetChannelBillData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetChannelBillData_Resp *pT_SPP_BILL,char* str_sql,int _count);
 
-extern int  spp_bill_GetAliOverFlowData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetAliOverFlowData_Resp *pT_SPP_BILL,char* str_sql,char* count_sql,int* _count);
+extern int  spp_bill_GetAliOverFlowData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetAliOverFlowData_Resp *pT_SPP_BILL,char* str_sql,int _count);
 
 extern int  spp_bill_GetWXOverFlowData( int i_cmd, T_STSYBASE_IN_PARAM* in_param,stGetWXOverFlowData_Resp* pT_SPP_BILL,char* str_sql,int count);
 

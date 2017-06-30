@@ -29,6 +29,10 @@ CBillContrastBase* CBankFactory::CreateBankFactory(const std::string& bank_type)
 	{
 		return new CBillContrastCommon();
 	}
+	if(bank_type == "SPDB")
+	{
+		return new CBillContrastSPDB();
+	}
 #endif
 //	if(bank_type == "TARCB")  //泰山农商行
 //	{
