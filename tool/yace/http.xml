@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<http>
+    <url>http://10.100.100.82:8080/user</url>
+    <threads>10</threads>
+    <duration>10</duration>
+</http>
+

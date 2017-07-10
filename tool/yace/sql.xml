@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mysql threads="1" duration="5" ip="10.100.100.84" port="3306" dbname="pay_order_db_201703" user="speedpos" passwd="speedpos@123">
+    <sql>select ?(int,6)</sql>
+    <sql>select "?(str,3)"</sql>
+    <sql>select ?(static,"haha","jjj","xxx","asada")</sql>
+</mysql>

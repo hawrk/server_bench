@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<tcp>
+    <ip>10.100.100.82</ip>
+    <port>18800</port>
+    <threads>1</threads>
+    <duration>5</duration>
+    <content>mchid=?(int,6)&amp;cmd=?(static,1,2)&amp;test=?(str, 6)</content>
+</tcp>

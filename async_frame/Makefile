@@ -5,8 +5,10 @@ GCCVER := $(shell $(CC) -dumpversion | awk -F. '{ print $$1"."$$2}' )
 
 L5_LIB=./ex_lib/L5api
 
+HOME_LIB=/home/hawrk/github/server_bench/lib
+
 INC += -I../comm -I../comm/tbase -I../async -I../worker -I../comm/stat_mgr
-LIB += -lpthread -ldl -rdynamic 
+LIB += -lpthread -ldl -rdynamic -L$(HOME_LIB) -lqos_client
 INC += -I$(L5_LIB)
 
 BUILD_DIR=../../build 
@@ -42,26 +44,23 @@ ifeq ($(ARCH),32)
 endif
 CFLAGS  += -O2 -g -fPIC -Wall -pipe -fno-ident -MMD -D_GNU_SOURCE -D_REENTRNT
 
-GREEN = \\e[1m\\e[32m
-CYAN = \\e[1m\\e[36m
-RESET = \\e[m
-
 #CXXFLAGS=-fno-rtti
 CXXFLAGS+=$(CFLAGS)
 
 
 $(OBJ_DIR)/%$(OBJ_EXT): %$(CXXSRC_EXT)
-	@echo -e "Compiling $(GREEN)$<$(RESET)..."
+	@echo -e "Compiling $(GREEN)$< ..."
 	@-mkdir -p $(OBJ_DIR)
 	@$(CXX) $(INC) $(CXXFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/%$(OBJ_EXT): %$(CSRC_EXT)
-	@echo -e "Compiling $(GREEN)$<$(RESET)..."
+	@echo -e "Compiling $< ..."
 	@-mkdir -p $(OBJ_DIR)
 	@$(CC) $(INC) $(CFLAGS) -c $< -o $@
 
 
-all:$(TARGET) lib_so
+#all:$(TARGET) lib_so
+all:$(TARGET)
 
 lib_so:
 ifeq ($(ARCH),32)
@@ -72,10 +71,11 @@ endif
 	install $(L5_LIB)/libqos_client.so ../../bin/lib
 
 $(TARGET) : $(OBJ)
-	@echo -e "Linking $(CYAN)$@$(RESET) ..."
+	@echo -e "Linking  $@ ..."
 	@-mkdir -p $(LIB_DIR)
+	@echo $(CXX) -o $@ $^ -shared $(CXXFLAGS) $(LIB)
 	@$(CXX) -o $@ $^ -shared $(CXXFLAGS) $(LIB)
-	install *.so ../../bin/lib
+	#install *.so ../../bin/lib
 
 clean:
 	@echo

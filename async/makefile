@@ -26,32 +26,18 @@ OBJ = client_unit.o \
 	interface.o \
 	spp_async_interface.o
 
-RED = \\e[1m\\e[31m
-DARKRED = \\e[31m
-GREEN = \\e[1m\\e[32m
-DARKGREEN = \\e[32m
-BLUE = \\e[1m\\e[34m
-DARKBLUE = \\e[34m
-YELLOW = \\e[1m\\e[33m
-DARKYELLOW = \\e[33m
-MAGENTA = \\e[1m\\e[35m
-DARKMAGENTA = \\e[35m
-CYAN = \\e[1m\\e[36m
-DARKCYAN = \\e[36m
-RESET = \\e[m
-CRESET =  ;echo -ne \\e[m; test -s $@
 
 $(TARGET):$(OBJ)
-	@echo -e  Linking $(CYAN)$@$(RESET) ...$(RED) 
-	@$(CXX) -o $@ $^ -shared $(CFLAGS) $(LIB) $(CRESET)
-	install *.so ../../bin/lib/
+	@echo -e  Linking $@$
+	@$(CXX) -o $@ $^ -shared $(CFLAGS) $(LIB) 
+	#install *.so ../../bin/lib/
 
 %.o: %.cpp
-	@echo -e Compiling $(GREEN)$<$(RESET) ...$(RED)
-	@$(CXX) $(CFLAGS) -c -o $@ $< $(INC) $(CRESET)   
+	@echo -e Compiling $<
+	@$(CXX) $(CFLAGS) -c -o $@ $< $(INC)   
 %.o: %.c
-	@echo -e Compiling $(GREEN)$<$(RESET) ...$(RED)
-	@$(CC) $(CFLAGS) -c -o $@ $< $(INC) $(CRESET)    
+	@echo -e Compiling $<
+	@$(CC) $(CFLAGS) -c -o $@ $< $(INC)  
 clean:
 	@rm -f $(OBJ) $(TARGET)
 
