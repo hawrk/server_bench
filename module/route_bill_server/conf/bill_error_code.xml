@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <!--优先级 : 透传,转义,缺省-->
+
+    <!--透传(多个错误码用逗号分隔)-->
+    <transparent>
+        <tp_code code="200201" />
+        <tp_code code="200224" />
+    </transparent>
+    
+    <!--转义-->
+    <errcode>
+        <errcode code="200001" msg="系统错误" />
+        <errcode code="200002" msg="数据库查询错误" />
+        <errcode code="200003" msg="数据库插入错误" />
+        <errcode code="200004" msg="数据库更新错误" />
+        <errcode code="200005" msg="数据库记录已存在" />
+        <errcode code="200006" msg="解析xml失败" />
+        <errcode code="200007" msg="解析Json失败" />
+        <errcode code="200005" msg="数据库记录已存在" />
+        <errcode code="200201" msg="关键入参错误!" />
+        <errcode code="200202" msg="商户状态非法!" />
+        <errcode code="200203" msg="代付通道已存在!" />
+        <errcode code="200204" msg="代付通道不存在!" />
+        <errcode code="200205" msg="代付商户已存在!" />
+        <errcode code="200206" msg="商户不存在!" />
+        <errcode code="200207" msg="商户签名校验失败!" />
+        <errcode code="200208" msg="代付渠道状态非法!" />
+        <errcode code="200209" msg="订单已存在!" />
+        <errcode code="200212" msg="操作员不存在!" />
+        <errcode code="200213" msg="操作员状态有误!" />
+        <errcode code="200214" msg="当前状态不允许同步!" />
+        <errcode code="200221" msg="通道密钥未配置!" />
+        <errcode code="200222" msg="通道密钥未配置!" />
+        <errcode code="200223" msg="商户手续费不能低于渠道手续费!" />
+        <errcode code="200225" msg="商户代付号有误!" />
+        <errcode code="200226" msg="商户代付账号有误!" />
+        <errcode code="200301" msg="资金账户已存在!" />
+        <errcode code="200302" msg="资金账户不存在!" />
+        <errcode code="200303" msg="代付通道已存在!" />
+        <errcode code="200304" msg="代付通道不存在!" />
+        <errcode code="200305" msg="结算记录数与实际不符!" />
+        <errcode code="200309" msg="当前状态不允许结算!" />
+        <errcode code="200310" msg="当前状态不允许重新上传!" />
+        <errcode code="200314" msg="含有联行号为空的结算单，请检查!" />
+    </errcode>
+
+    <!--缺省-->
+    <default_error >
+        <default_code code="20001" msg="系统错误!"/>
+    </default_error>
+</root>

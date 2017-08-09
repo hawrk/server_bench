@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<root>
+    <sys_cfg>
+        <error_file file_path="../client/bill_server/conf/bill_error_code.xml"></error_file>
+    </sys_cfg>
+    
+    <databases>
+        <dbconfig ip="10.100.120.81" port="3306"   dbnum="1"  type="1" user="root" pwd="123456" dbname = ""/>
+    </databases>
+
+    <chinacardpos_url>http://121.201.111.67:9080/</chinacardpos_url>
+    <chinacardpos_billpath>/usr/local/services/spp_route_bill_server-1.0/client/bill_server/data/</chinacardpos_billpath>
+    <file2db_shell_path>../client/bill_server/conf/BillDatetoDB.sh</file2db_shell_path>
+
+</root>
+

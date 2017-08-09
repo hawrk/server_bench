@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="GBK"?>
+<order_config>
+	<work_num>16200734</work_num>
+	<clog logdir="../log/water/" loglevel="13" logsize="200000000" logprefix="spp_route_bill_server_" />
+	
+    <id_server use_l5="0" l5mod="28483" l5cmd="262146" host="10.100.100.82" port="18800" timeout="3" />
+    
+    <trade_server use_l5="0" l5mod="28483" l5cmd="262146" host="10.100.100.82" port="54880" timeout="3" />
+    
+    <paygate_server use_l5="0" l5mod="28483" l5cmd="262146" host="10.100.120.71" port="13550" timeout="3" />
+
+    <auth_server use_l5="0" l5mod="28483" l5cmd="262146" host="10.100.120.71" port="20800" timeout="3" />
+
+    <base_config_db ip="10.100.120.81" port="3306" db="ROUTE_BILL_DB" user="root" pwd="123456" />
+
+    <busi_config confpath="../client/bill_server/conf/bill_busi_conf.xml" />
+
+</order_config>
