@@ -51,6 +51,10 @@ INT32 CSpeedPosConfig::LoadConfig(const CHAR *pchConfig)
     fprintf( stderr, "load bill_server...\n" );
 	FETCH_SERVER_INFO("bill_server", m_stbillServer);
 
+    //account_server
+    fprintf( stderr, "load account_server...\n" );
+	FETCH_SERVER_INFO("account_server", m_stAccountServer);
+
 	fprintf(stderr, "load base config db...\n");
 	XMLNode xDbNode = xMainNode.getChildNode("base_config_db");
 	std::string shopIp = xDbNode.getAttribute("ip");
@@ -108,6 +112,9 @@ INT32 CSpeedPosConfig::InitServer()
 
 	m_billSocket = new CSocket;
 	m_billSocket->SetServer( m_stbillServer );
+
+	m_accountSocket = new CSocket;
+	m_accountSocket->SetServer( m_stAccountServer );
 
     return 0;
 }

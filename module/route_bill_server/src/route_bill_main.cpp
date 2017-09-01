@@ -19,6 +19,9 @@
 #include "CMchBillQuery.h"
 #include "CRouteSettleQuery.h"
 #include "CLiquidationTask.h"
+#include "CDownLoadBillDetail.h"
+#include "CAccountChecking.h"
+#include "CExceptionProc.h"
 
 // 公共服务接口
 #define CMD_CREATE_ROUTE_BILL    9010
@@ -31,7 +34,9 @@
 #define CMD_MCH_BILL_QUERY       9080
 #define CMD_SETTLE_QUERY         9090
 #define CMD_LIQUIDATION          9100
-
+#define CMD_DOWNLOAD_DETAIL      9200
+#define CMD_ACCOUNTCHECKIN       9300
+#define CMD_EXCEPTION_PROC       9400
 
 void RegTask()
 {
@@ -47,6 +52,9 @@ void RegTask()
 	REGISTER_TASK(ORDER_VER_1, CMD_MCH_BILL_QUERY, CMchBillQuery);  //商户账单查询
 	REGISTER_TASK(ORDER_VER_1, CMD_SETTLE_QUERY, CRouteSettleQuery);  //清分 结果查询
 	REGISTER_TASK(ORDER_VER_1, CMD_LIQUIDATION, CLiquidationTask);  //清分操作
+	REGISTER_TASK(ORDER_VER_1, CMD_DOWNLOAD_DETAIL, CDownLoadBillDetail);  //明细下载
+	REGISTER_TASK(ORDER_VER_1, CMD_ACCOUNTCHECKIN, CAccountChecking);  //清分入账操作
+	REGISTER_TASK(ORDER_VER_1, CMD_EXCEPTION_PROC, CExceptionProc);  //异常单状态扭转
 }
 
 

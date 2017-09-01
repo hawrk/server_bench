@@ -87,7 +87,7 @@ void CCreateRouteBill::CheckInput()
 	Check::CheckStrParam("bill_date", m_InParams["bill_date"], 1, 10, true);  //对账日期  20170710
 
 
-	//Check::CheckStrParam("pay_channel", m_InParams["pay_channel"], 1, 10, true);  //银行通道
+	Check::CheckStrParam("pay_channel", m_InParams["pay_channel"], 1, 10, true);  //银行通道  (如有对账不平，可单独根据通道号生成)
 
 
 }
@@ -174,7 +174,7 @@ INT32 CCreateRouteBill::GetSysPaymentBill(clib_mysql* order_db,const int& iDbInd
 	sqlss	<<" SELECT Forder_no,Fout_order_no,Fmch_id,Fmch_name, Fpay_platform,Fpay_type, Fpay_channel_id,Fpay_channel, Fchannel_mch_id,"
 				<<" Ftransaction_id,Fpayment_fee,Frefund_fee,Ffactor_rate_val,Fmch_rate_val,Fproduct_rate_val,Fplatform_rate_val, "
 				<<"Fcur_type,Forder_status,Fpay_time FROM "<< szOrderTableName
-				<<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time
+				<<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' AND Fpay_channel_id = '"<<m_InParams["pay_channel"]
 				<<"' AND Forder_status = 2";
 
 	iRet = m_mysql.QryAndFetchResMVector(*order_db,sqlss.str().c_str(),resMVector);
@@ -183,6 +183,12 @@ INT32 CCreateRouteBill::GetSysPaymentBill(clib_mysql* order_db,const int& iDbInd
 		ostringstream sqlss;
 		for(size_t i = 0; i < resMVector.size(); i++)
 		{
+			resMVector[i]["Fpayment_fee"] = resMVector[i]["Fpayment_fee"].empty() ? "0":resMVector[i]["Fpayment_fee"];
+			resMVector[i]["Frefund_fee"] = resMVector[i]["Frefund_fee"].empty() ? "0" :resMVector[i]["Frefund_fee"];
+			resMVector[i]["Ffactor_rate_val"] = resMVector[i]["Ffactor_rate_val"].empty() ? "0":resMVector[i]["Ffactor_rate_val"];
+			resMVector[i]["Fmch_rate_val"] = resMVector[i]["Fmch_rate_val"].empty() ? "0":resMVector[i]["Fmch_rate_val"];
+			resMVector[i]["Fproduct_rate_val"] = resMVector[i]["Fproduct_rate_val"].empty() ? "0" :resMVector[i]["Fproduct_rate_val"];
+			resMVector[i]["Fplatform_rate_val"] = resMVector[i]["Fplatform_rate_val"].empty() ? "0":resMVector[i]["Fplatform_rate_val"];
 			sqlss.str("");
 			sqlss <<"insert into "
 				  <<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
@@ -193,9 +199,9 @@ INT32 CCreateRouteBill::GetSysPaymentBill(clib_mysql* order_db,const int& iDbInd
 				  <<"','"<<resMVector[i]["Fmch_name"]
 				  <<"','"<<resMVector[i]["Fpay_platform"]<<"','"<<resMVector[i]["Fpay_type"]<<"','"<<resMVector[i]["Fpay_channel_id"]
 				  <<"','"<<resMVector[i]["Fpay_channel"]<<"','"<<resMVector[i]["Fchannel_mch_id"]<<"','"<<resMVector[i]["Ftransaction_id"]
-				  <<"','"<<resMVector[i]["Fpayment_fee"]<<"','"<<resMVector[i]["Frefund_fee"]<<"','"<<resMVector[i]["Ffactor_rate_val"]
-				  <<"','"<<resMVector[i]["Fmch_rate_val"]<<"','"<<resMVector[i]["Fproduct_rate_val"]<<"','"<<resMVector[i]["Fplatform_rate_val"]
-				  <<"','"<<resMVector[i]["Fcur_type"]<<"','SUCCESS',0,'"<<resMVector[i]["Fpay_time"]<<"');";
+				  <<"',"<<resMVector[i]["Fpayment_fee"]<<","<<resMVector[i]["Frefund_fee"]<<","<<resMVector[i]["Ffactor_rate_val"]
+				  <<","<<resMVector[i]["Fmch_rate_val"]<<","<<resMVector[i]["Fproduct_rate_val"]<<","<<resMVector[i]["Fplatform_rate_val"]
+				  <<",'"<<resMVector[i]["Fcur_type"]<<"','SUCCESS','0','"<<resMVector[i]["Fpay_time"]<<"');";
 
 		    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
 		    if(iRet != 1)
@@ -206,17 +212,17 @@ INT32 CCreateRouteBill::GetSysPaymentBill(clib_mysql* order_db,const int& iDbInd
 
 		    //加渠道信息
 		    sqlss.str("");
-		    sqlss <<"select Forder_no,Fpay_channel_id,Fmch_id,Fpay_platform,Fpay_type,Ffactor_id, Ftotal_amount,Ffactor_rate_val from "
+		    sqlss <<"select Forder_no,Fpay_channel_id,Fmch_id,Fpay_platform,Fpay_type,Ffactor_id,Ffactor_name,Ftotal_amount,Ffactor_rate_val from "
 		    	  <<szOrderChannelTableName<<" WHERE Forder_no ='"<<resMVector[i]["Forder_no"]<<"'";
 
 		    iRet = m_mysql.QryAndFetchResMVector(*order_db,sqlss.str().c_str(),resChanVector);
-			for(size_t i = 0; i < resChanVector.size(); i++)
+			for(size_t j = 0; j < resChanVector.size(); j++)
 			{
 				sqlss.str("");
-				sqlss  <<"insert into "<<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL<<" (Forder_no,Fpay_channel_id,Fmch_id,Fpay_platform, Fpay_type,Fagent_id,"
-					   <<"Ftotal_amount,Fchannel_profit, Forder_status, Fpay_time) values('"<<resChanVector[i]["Forder_no"]<<"','"<<resChanVector[i]["Fpay_channel_id"]
-					   <<"','"<<resChanVector[i]["Fmch_id"]<<"','"<<resChanVector[i]["Fpay_platform"]<<"','"<<resChanVector[i]["Fpay_type"]
-			           <<"','"<<resChanVector[i]["Ffactor_id"]<<"','"<<resChanVector[i]["Ftotal_amount"]<<"','"<<resChanVector[i]["Ffactor_rate_val"]
+				sqlss  <<"insert into "<<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL<<" (Forder_no,Fpay_channel_id,Fmch_id,Fpay_platform, Fpay_type,Fagent_id,Fagent_name,"
+					   <<"Ftotal_amount,Fchannel_profit, Forder_status, Fpay_time) values('"<<resChanVector[j]["Forder_no"]<<"','"<<resChanVector[j]["Fpay_channel_id"]
+					   <<"','"<<resChanVector[j]["Fmch_id"]<<"','"<<resChanVector[j]["Fpay_platform"]<<"','"<<resChanVector[j]["Fpay_type"]
+			           <<"','"<<resChanVector[j]["Ffactor_id"]<<"','"<<resChanVector[j]["Ffactor_name"]<<"','"<<resChanVector[j]["Ftotal_amount"]<<"','"<<resChanVector[j]["Ffactor_rate_val"]
 					   <<"','SUCCESS','"<<resMVector[i]["Fpay_time"]<<"');";
 			    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
 			    if(iRet != 1)
@@ -237,12 +243,13 @@ void CCreateRouteBill::GetSysRefundBill(clib_mysql* refund_db)
 {
 	INT32 iRet = 0;
 	SqlResultMapVector resMVector;
+	SqlResultMapVector resChanVector;
 
 	sqlss.str("");
-	sqlss	<<" SELECT Frefund_no,Fout_refund_no,Fmch_id,Fmch_name, Fpay_platform,Fpay_type, Fpay_channel_id,Fpay_channel,"
+	sqlss	<<" SELECT Frefund_no,Fout_refund_no,Fmch_id,Fmch_name,Forigin_order_no, Fpay_platform,Fpay_type, Fpay_channel_id,Fpay_channel,"
 				<<" Frefund_id,Frefund_fee,Frefund_status,Frefund_time FROM "
 				<< ROUTE_REFUND_DB<<"."<<REFUND_TABLE
-				<<" WHERE Frefund_time >='"<<m_start_time<<"' AND Frefund_time <='"<<m_end_time
+				<<" WHERE Frefund_time >='"<<m_start_time<<"' AND Frefund_time <='"<<m_end_time<<"' AND Fpay_channel_id = '"<<m_InParams["pay_channel"]
 				<<"' AND Frefund_status = 2";
 
 	iRet = m_mysql.QryAndFetchResMVector(*refund_db,sqlss.str().c_str(),resMVector);
@@ -268,19 +275,29 @@ void CCreateRouteBill::GetSysRefundBill(clib_mysql* refund_db)
 		    	throw(CTrsExp(INSERT_DB_ERR,"insert t_route_check_bill fail!!!"));
 		    }
 
-		    //加渠道信息   -----hawrk 先不考虑退款退手续费
-//			sqlss.str("");
-//			sqlss	<<" insert into "<<ROUTE_BILL_DB<<"."<<ORDER_CHANNEL<<" (Forder_no,Fpay_channel_id,Fmch_id,Fpay_platform, Fpay_type,Fagent_id, "
-//						<<"Ftotal_amount,Fchannel_profit, Forder_status, Fpay_time) select Frefund_no,Fpay_channel_id,Fmch_id,Fpay_platform, "
-//						<<"Fpay_type,Fagent_id, Frefund_fee,Fchannel_profit, 'SUCCESS',Fpay_time from "<< ROUTE_REFUND_DB<<"."<<REFUND_TABLE
-//						<<" WHERE Forder_no ='"<<resMVector[i]["Forder_no"]<<"'";
-//
-//		    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
-//		    if(iRet != 1)
-//		    {
-//		    	CERROR_LOG("insert t_route_bill_channel fail!!!");
-//		    	throw(CTrsExp(INSERT_DB_ERR,"insert t_route_bill_channel fail!!!"));
-//		    }
+		    //加渠道信息  --- 渠道表的退款数据，先要根据退款表中找到原 支付订单号，再根据支付订单号在渠道表找到对应的信息，再写入到渠道表
+		    sqlss.str("");
+		    sqlss <<"select Forder_no,Fpay_channel_id,Fmch_id,Fpay_platform,Fpay_type,Fagent_id, Ftotal_amount,Fchannel_profit from "
+		    	  <<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL<<" WHERE Forder_no ='"<<resMVector[i]["Forigin_order_no"]<<"'";
+
+		    iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resChanVector);
+			for(size_t j = 0; j < resChanVector.size(); j++)
+			{
+				sqlss.str("");
+				sqlss<<"insert into "<<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL<<" (Forder_no,Fpay_channel_id,Fpay_channel_name,Fmch_id,Fpay_platform, Fpay_type,Fagent_id,"
+					   <<"Ftotal_amount,Fchannel_profit, Forder_status, Fpay_time) values('"<<resMVector[i]["Frefund_no"]<<"','"<<resChanVector[j]["Fpay_channel_id"]
+					   <<"','"<<resMVector[i]["Fpay_channel"]<<"','"<<resChanVector[j]["Fmch_id"]<<"','"<<resChanVector[j]["Fpay_platform"]<<"','"<<resChanVector[j]["Fpay_type"]
+			           <<"','"<<resChanVector[j]["Fagent_id"]<<"','"<<resChanVector[j]["Ftotal_amount"]<<"','"<<resChanVector[j]["Fchannel_profit"]
+					   <<"','REFUND','"<<resMVector[i]["Frefund_time"]<<"');";
+
+			    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+			    if(iRet != 1)
+			    {
+			    	CERROR_LOG("GetSysRefundBill:insert t_route_bill_channel fail!!!");
+			    	throw(CTrsExp(INSERT_DB_ERR,"GetSysRefundBill:insert t_route_bill_channel fail!!!"));
+			    }
+			}
+
 		}
 	}
 }
@@ -291,21 +308,46 @@ void CCreateRouteBill::CheckBillRecord()
 	SqlResultSet outMap;
 
 	sqlss.str("");
-	sqlss	<<" SELECT count(*) as count FROM "
-				<< ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
-				<<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
-
+	sqlss <<"select Fbill_date,Fpay_channel,Fbill_result from "<<ROUTE_BILL_DB<<"."<<BILL_SUMMARY
+		  <<" where Fbill_date = '"<<m_InParams["bill_date"]<<"' and Fpay_channel = '"<<m_InParams["pay_channel"]
+		  <<"';";
 	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),outMap);
-	if(iRet < 0)
+	if(iRet == 1)
 	{
-		CERROR_LOG("get check bill fail!!");
-		throw(CTrsExp(QRY_DB_ERR,"get check bill fail!!"));
+		if(outMap["Fbill_result"] == "1")   //对账相符，不允许再生成
+		{
+			CERROR_LOG("CCreateRouteBill check bill success :[%s],[%s]!",outMap["Fbill_date"].c_str(),outMap["Fpay_channel"].c_str());
+			throw(CTrsExp(ERR_CHECK_BILL_EXIST,"当日已平账，不允许再生成对账记录 !"));
+		}
+
 	}
-	if(atoi(outMap["count"].c_str()) > 0)
-	{
-		CERROR_LOG("check bill record exist!!");
-		throw(CTrsExp(ERR_CHECK_BILL_EXIST,"本地对账记录已生成!!"));
-	}
+
+	//对账不符或当日还没有对账记录，清空当日对账记录
+	sqlss.str("");
+	sqlss	<<" DELETE FROM "
+				<< ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
+				<<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Fpay_channel_id = '"
+				<<m_InParams["pay_channel"] <<"';";
+
+    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+    if(iRet != 1)
+    {
+    	CERROR_LOG("CheckBillRecord:delete t_route_check_bill fail!!!");
+    	throw(CTrsExp(UPDATE_DB_ERR,"CheckBillRecord:delete t_route_check_bill fail!!!"));
+    }
+    //清空当日渠道对账记录
+	sqlss.str("");
+	sqlss	<<" DELETE FROM "
+				<< ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL
+				<<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Fpay_channel_id = '"
+				<<m_InParams["pay_channel"] <<"';";
+
+    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+    if(iRet != 1)
+    {
+    	CERROR_LOG("CheckBillRecord:delete t_route_bill_channel fail!!!");
+    	throw(CTrsExp(UPDATE_DB_ERR,"CheckBillRecord:delete t_route_bill_channel fail!!!"));
+    }
 }
 
 void CCreateRouteBill::SetRetParam()

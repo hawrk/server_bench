@@ -72,6 +72,13 @@ CRouteBillBusiConf::CRouteBillBusiConf(const char* szFileName)
 
 		BusiConfig.m_swiftpass_url = pt.get<string>("root.swiftpass_url");
 
+		BusiConfig.m_get_speedpos_bill_shell = pt.get<string>("root.speedpos_bill_shell_path");
+		BusiConfig.m_speedpos_sftp_ip = pt.get<string>("root.speedpos_sftp_ip");
+		BusiConfig.m_speedpos_sftp_port = pt.get<string>("root.speedpos_sftp_port");
+		BusiConfig.m_speedpos_sftp_user = pt.get<string>("root.speedpos_sftp_user");
+		BusiConfig.m_speedpos_sftp_pwd = pt.get<string>("root.speedpos_sftp_pwd");
+		BusiConfig.m_speedpos_remote_path = pt.get<string>("root.speedpos_remote_path");
+
 	}
 	catch(const boost::property_tree::xml_parser::xml_parser_error& e)
 	{

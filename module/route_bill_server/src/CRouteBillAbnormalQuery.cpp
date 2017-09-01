@@ -90,8 +90,8 @@ void CRouteBillAbnormalQuery::CheckInput()
 	Check::CheckStrParam("pay_channel", m_InParams["pay_channel"], 1, 10);
 	Check::CheckStrParam("bill_status", m_InParams["bill_status"], 1, 10);
 
-	//Check::CheckDigitalParam("bill_status", m_InParams["bill_status"], 1, 5);
 	Check::CheckDigitalParam("proc_status", m_InParams["proc_status"], 0, 5);
+	Check::CheckDigitalParam("abnormal_type", m_InParams["abnormal_type"], 0, 5);
 
 	Check::CheckPage(m_InParams["page"]);
 	Check::CheckLimit(m_InParams["limit"]);
@@ -134,6 +134,10 @@ void CRouteBillAbnormalQuery::QueryAbnormal()
     {
     	sWhereSql << "and Fporcess_status = '"<< m_InParams["proc_status"]<<"' ";
     }
+    if(!m_InParams["abnormal_type"].empty())
+    {
+    	sWhereSql << "and Fabnormal_type = '"<< m_InParams["abnormal_type"]<<"' ";
+    }
 
 
     sqlss.str("");
@@ -156,7 +160,7 @@ void CRouteBillAbnormalQuery::QueryAbnormal()
     }
 
     sqlss.str("");
-    sqlss <<"select Fbill_date,Fpay_channel,"
+    sqlss <<"select Fid,Fbill_date,Fpay_channel,"
     		"Fpf_trade_amount,Fpf_order_no,"
     		"Fch_trade_amount,Fch_order_no,"
     		"Ftrade_date,Forder_status,Fabnormal_type,Fporcess_status,Fcreate_time,Fmodify_time from "
@@ -173,6 +177,7 @@ void CRouteBillAbnormalQuery::QueryAbnormal()
 		for(unsigned int i = 0; i < billInfoVector.size(); i++)
 		{
 			BillJsonMap.clear();
+			AddJsonMap(BillJsonMap,"id",billInfoVector[i]["Fid"]);
 			AddJsonMap(BillJsonMap,"bill_date",billInfoVector[i]["Fbill_date"]);
 			AddJsonMap(BillJsonMap,"pay_channel",billInfoVector[i]["Fpay_channel"]);
 			AddJsonMap(BillJsonMap,"pf_trade_amount",billInfoVector[i]["Fpf_trade_amount"]);

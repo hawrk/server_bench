@@ -3,7 +3,7 @@
  *
  *  Created on: 2017年7月21日
  *      Author: hawrkchen
- *      Desc:生成商户账单
+ *      Desc:日切产生第一次清分记录并入账
  */
 
 #ifndef _CCREATEMCHBILL_H_
@@ -55,7 +55,15 @@ protected:
 
     void CreateMchBill();
 
-    void InserIntoMchBill(ChannelInfo& channel,MchBillSum& mch_bill);
+    void CreateChanBill();
+
+    void InserIntoMchBill(MchBillSum& mch_bill,const char* fund_type);
+
+    void AccountingCheckin();
+
+    void UpdateCheckStatus(const string& order_no,const string& fund_id,const string& account_no,const string& acc_status,const string& acc_desc);
+
+    std::string GetAccountSeqNo();
 
 	void SetRetParam();
 
@@ -66,8 +74,12 @@ protected:
 	NameValueMap m_RetMap;
 	JsonMap m_ContentJsonMap;
 
+	//vector<ChannelInfo> vec_channel;
+
 	std::map<std::string, MchBillSum> mchPayBillMap;
 	std::map<std::string, MchBillSum> mchRefundBillMap;
+	std::map<std::string, OrderPayLiquidate> orderChannelMap;
+	std::map<std::string, OrderPayLiquidate> orderChannelRefMap;
 
 	CMySQL m_mysql;
 

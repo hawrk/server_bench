@@ -61,6 +61,8 @@ protected:
 
     void InsertLiquidationDB(const string& fund_type,OrderPayLiquidate& liq_map);
 
+    void AccountCheckin();
+
 	void SetRetParam();
 
 	bool CheckBillSuccess(const string& order_no);
@@ -74,6 +76,7 @@ protected:
 	std::map<std::string, OrderPayLiquidate> orderPayLiquiMap;
 	std::map<std::string, OrderPayLiquidate> orderRefundLiquiMap;
 	std::map<std::string, OrderPayLiquidate> orderChannelLiquiMap;
+	std::map<std::string, OrderPayLiquidate> orderChannelRefLiquiMap;
 
 	NameValueMap m_InParams;
 	NameValueMap m_RetMap;

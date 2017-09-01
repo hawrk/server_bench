@@ -1,13 +1,13 @@
 /*
- * CRouteSettleQuery.h
+ * CExceptionProc.h
  *
- *  Created on: 2017年7月20日
+ *  Created on: 2017年8月21日
  *      Author: hawrkchen
- *      Desc :清算记录查询
+ *      Desc:对账差错处理状态处理
  */
 
-#ifndef _CROUTESETTLEQUERY_H_
-#define _CROUTESETTLEQUERY_H_
+#ifndef _CEXCEPTIONPROC_H_
+#define _CEXCEPTIONPROC_H_
 
 #include "IUrlProtocolTask.h"
 #include <sys/types.h>
@@ -19,11 +19,11 @@
 #include "CRouteBillBase.h"
 
 
-class CRouteSettleQuery : public IUrlProtocolTask
+class CExceptionProc : public IUrlProtocolTask
 {
 public:
-	CRouteSettleQuery();
-	virtual ~CRouteSettleQuery();
+	CExceptionProc();
+	virtual ~CExceptionProc();
 
     INT32 Init()
     {
@@ -49,7 +49,11 @@ protected:
     void CheckInput();
     void BuildResp( CHAR** outbuf, INT32& outlen );
 
-    void QueryLIquidation();
+    void CheckOrderStatus();
+
+    void UpdateAbnormalStatus(int type);
+
+    INT32 OrderSync(string& order_no);
 
 	void SetRetParam();
 
@@ -67,4 +71,4 @@ protected:
 
 
 
-#endif /* _CROUTESETTLEQUERY_H_ */
+#endif /* _CEXCEPTIONPROC_H_ */

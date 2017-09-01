@@ -1,13 +1,14 @@
 /*
- * CRouteSettleQuery.h
+ * CDownLoadBillDetail.h
  *
- *  Created on: 2017年7月20日
+ *  Created on: 2017年8月17日
  *      Author: hawrkchen
- *      Desc :清算记录查询
+ *      Desc :生产商户 和渠道的账单明细
  */
 
-#ifndef _CROUTESETTLEQUERY_H_
-#define _CROUTESETTLEQUERY_H_
+#ifndef _CDOWNLOADBILLDETAIL_H_
+#define _CDOWNLOADBILLDETAIL_H_
+
 
 #include "IUrlProtocolTask.h"
 #include <sys/types.h>
@@ -19,11 +20,11 @@
 #include "CRouteBillBase.h"
 
 
-class CRouteSettleQuery : public IUrlProtocolTask
+class CDownLoadBillDetail : public IUrlProtocolTask
 {
 public:
-	CRouteSettleQuery();
-	virtual ~CRouteSettleQuery();
+	CDownLoadBillDetail();
+	virtual ~CDownLoadBillDetail();
 
     INT32 Init()
     {
@@ -49,13 +50,24 @@ protected:
     void CheckInput();
     void BuildResp( CHAR** outbuf, INT32& outlen );
 
-    void QueryLIquidation();
+    INT32 CalcEffectiveTimeBill();
+
+
+    void CreateMchBill();
+
+    void CreateChanBill();
 
 	void SetRetParam();
+
+	std::string m_start_time;
+	std::string m_end_time;
 
 	NameValueMap m_InParams;
 	NameValueMap m_RetMap;
 	JsonMap m_ContentJsonMap;
+
+	std::map<std::string, MchBillSum> mchPayBillMap;
+	std::map<std::string, MchBillSum> mchRefundBillMap;
 
 	CMySQL m_mysql;
 
@@ -66,5 +78,4 @@ protected:
 };
 
 
-
-#endif /* _CROUTESETTLEQUERY_H_ */
+#endif /* _CDOWNLOADBILLDETAIL_H_ */

@@ -104,6 +104,11 @@ string GetTime();
 
 string UnixTime2Date(string & szUnizTime);
 
+/*
+ * 把 2017-08-03 11:34:38 格式转换成 20170803
+ */
+string toDateEx(const string& strDate);
+
 string toDate(const string& strDate);
 
 string GetYesterDate();

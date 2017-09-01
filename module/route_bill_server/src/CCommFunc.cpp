@@ -320,6 +320,17 @@ string toDate(const string& strDate)
     return szTmp;
 }
 
+string toDateEx(const string& strDate)
+{
+    int year, month, day;
+    sscanf(strDate.c_str(), "%04d-%02d-%02d", &year, &month, &day);
+
+    char szTmp[11];
+    snprintf(szTmp, sizeof(szTmp), "%04d%02d%02d", year, month, day);
+
+    return szTmp;
+}
+
 
 string GetYesterDate()
 {

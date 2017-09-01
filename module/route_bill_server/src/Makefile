@@ -17,7 +17,7 @@ AUTH_COMM   := ../common
 #busi
 OPENSSL_ROOT   = ../../Base/third_party/openssl
 CURL_ROOT      = ../../Base/third_party1/curl
-TINYXML_ROOT   = ../../Base/third_party1/tinyxml2
+TINYXML_ROOT   = ../../Base/third_party/tinyxml2
 RAPIDJSON_ROOT = ../../Base/third_party/rapidjson
 URI_ROOT       = ../../Base/third_party/network-uri
 HIREDIS_ROOT   = ../../Base/third_party/hiredis
@@ -44,6 +44,7 @@ INCS		:= -I. -I.. -I../../ -I$(COMM) -I$(AUTH_COMM) -I$(DB_DIR) -I$(INC_HOME) -I
 	       -I$(TINYXML_ROOT)/tinyxml2 \
            -I$(RAPIDJSON_ROOT)/include \
            -I$(URI_ROOT)/include \
+           -I$(BASE)/tars_util/include \
 		   -I$(HIREDIS_ROOT)/include \
 		   -I$(SSH2_ROOT)/include \
 		   -I$(RABBITMQ_ROOT)/include \
@@ -66,7 +67,7 @@ LDFLAGS	:= -shared -fPIC
 OBJS := route_bill_main.o CSpeedPosConfig.o CCommFunc.o CRouteBillBase.o CRouteBillBusiConf.o \
 		CCreateRouteBill.o  CDownLoadCheckBill.o CDownLoadSettleFile.o CBillCheckTask.o \
 		CRouteBillSummaryQuery.o CRouteBillAbnormalQuery.o CCreateMchBill.o CMchBillQuery.o \
-		CRouteSettleQuery.o CLiquidationTask.o \
+		CRouteSettleQuery.o CLiquidationTask.o CDownLoadBillDetail.o CAccountChecking.o CExceptionProc.o \
 		$(COMM)/md5c.o \
 		$(COMM)/config/HttpConfig.o $(COMM)/config/ServerConfig.o\
 		$(COMM)/svr/SvrClient.o $(COMM)/openapi_client.o \
@@ -76,7 +77,7 @@ OBJS := route_bill_main.o CSpeedPosConfig.o CCommFunc.o CRouteBillBase.o CRouteB
 #-include $(OBJS:.o=.d)
 
 LIBS		:= -L$(LIB_HOME) -lxmlParser -lqos_client -lttc -lmsglog -ldnscli -lrt -lpthread -liconv -lcomm\
-				-lpcre -ldcapi -lmysqlclient -ltinyxml -lcrypto -lssl \
+				-lpcre -ldcapi -lmysqlclient -ltinyxml -ltarsutil -lcrypto -lssl \
 				-L$(AUTH_COMM) -lbasecomm \
                $(CURL_ROOT)/lib/libcurl.a \
 	           $(TINYXML_ROOT)/lib64/libtinyxml2.a \

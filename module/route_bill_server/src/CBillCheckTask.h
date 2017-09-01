@@ -17,7 +17,7 @@
 #include "../Base/common/comm_tools.h"
 #include "CheckParameters.h"
 #include "CRouteBillBase.h"
-
+#include "util/tc_file.h"
 
 class CBillCheckTask : public IUrlProtocolTask
 {
@@ -60,6 +60,8 @@ protected:
 
     void LoadBillFiletoDB();
 
+    void CallPayGate2GetFactorID();
+
     void GetBillData();
 
     void CompareSuccess();
@@ -76,7 +78,8 @@ protected:
     INT32 BankOverflowQuery(string& order_no,int order_flag);
 
 
-    void TracateBankDB();
+    void TracateBankDB(const string& channel);
+
 
     void SendCreatBillRequest();
 
@@ -88,6 +91,8 @@ protected:
 	NameValueMap m_InParams;
 	NameValueMap m_RetMap;
 	JsonMap m_ContentJsonMap;
+
+	vector<string> factor_vec;
 
 
 	int m_abnor_num;  //异常笔数

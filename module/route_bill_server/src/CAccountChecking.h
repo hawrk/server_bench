@@ -1,13 +1,13 @@
 /*
- * CRouteSettleQuery.h
+ * CAccountChecking.h
  *
- *  Created on: 2017年7月20日
+ *  Created on: 2017年8月18日
  *      Author: hawrkchen
- *      Desc :清算记录查询
+ *      Desc :清分入账操作（渠道和商户）
  */
 
-#ifndef _CROUTESETTLEQUERY_H_
-#define _CROUTESETTLEQUERY_H_
+#ifndef _CACCOUNTCHECKING_H_
+#define _CACCOUNTCHECKING_H_
 
 #include "IUrlProtocolTask.h"
 #include <sys/types.h>
@@ -19,11 +19,11 @@
 #include "CRouteBillBase.h"
 
 
-class CRouteSettleQuery : public IUrlProtocolTask
+class CAccountChecking : public IUrlProtocolTask
 {
 public:
-	CRouteSettleQuery();
-	virtual ~CRouteSettleQuery();
+	CAccountChecking();
+	virtual ~CAccountChecking();
 
     INT32 Init()
     {
@@ -49,13 +49,28 @@ protected:
     void CheckInput();
     void BuildResp( CHAR** outbuf, INT32& outlen );
 
-    void QueryLIquidation();
+    INT32 CalcEffectiveTimeBill();
+
+    void CheckAccountStatus();
+
+    std::string GetAccountSeqNo();
+
+    void CheckinAccount();
+
+
+    void UpdateDistributionStatus(const string& account_no,const string& acc_status,const string& acc_desc);
 
 	void SetRetParam();
+
+	std::string m_start_time;
+	std::string m_end_time;
 
 	NameValueMap m_InParams;
 	NameValueMap m_RetMap;
 	JsonMap m_ContentJsonMap;
+
+	std::map<std::string, MchBillSum> mchPayBillMap;
+	std::map<std::string, MchBillSum> mchRefundBillMap;
 
 	CMySQL m_mysql;
 
@@ -67,4 +82,4 @@ protected:
 
 
 
-#endif /* _CROUTESETTLEQUERY_H_ */
+#endif /* _CACCOUNTCHECKING_H_ */

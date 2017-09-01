@@ -45,6 +45,10 @@ INT32 CCreateMchBill::Execute( NameValueMap& mapInput, char** outbuf, int& outle
 
 	    CreateMchBill();
 
+	    CreateChanBill();
+
+	    AccountingCheckin();
+
 
 	}
 	catch(CTrsExp& e)
@@ -140,112 +144,73 @@ void CCreateMchBill::CheckMchBillTask()
 void CCreateMchBill::CreateMchBill()
 {
 	int iRet;
-	vector<ChannelInfo> vec_channel;
 	SqlResultMapVector resMVector;
-	SqlResultMapVector mchMVector;
-	//根据 当天对账日期 产生当天的对账单
+	//SqlResultMapVector mchMVector;
+	//商户订单清分冻结  （目前只有成功）
 	sqlss.str("");
-	sqlss <<"SELECT distinct Fpay_channel_id  as pay_channel_id,Fpay_channel as channel_name"
-		  <<" FROM "<<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
-		  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
+	sqlss <<"SELECT Forder_no,Fmch_id,Fpay_channel_id,Fpay_channel,Ftotal_amount,Fmch_rate_val FROM "
+		  <<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
+		  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time
+		  <<"' AND Forder_status ='"<<ORDER_SUCCESS<<"';";
 
 	iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
-	if(iRet == 0)  //无记录
+	if(iRet == 1)
 	{
-		CDEBUG_LOG("current date :[%s] no record...",m_InParams["bill_date"].c_str());
-		return ;
-	}
-
-	for(size_t i = 0; i < resMVector.size(); i++)
-	{
-		ChannelInfo channelinfo;
-		channelinfo.Reset();
-		channelinfo.channel_id = resMVector[i]["pay_channel_id"];
-		channelinfo.channel_name = resMVector[i]["channel_name"];
-		vec_channel.push_back(channelinfo);
-	}
-
-	//
-	for(auto channel :vec_channel)
-	{
-		mchPayBillMap.clear();
-		mchRefundBillMap.clear();
-
-		//商户成功
-		mchMVector.clear();
-		sqlss.str("");
-		sqlss <<"SELECT Fmch_id,Fpay_channel_id,count(*) as total_count,sum(Ftotal_amount) as total_amount ,"
-				"sum(Fmch_rate_val) as mch_rate_val FROM "
-			  <<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
-			  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' AND Fpay_channel_id='"
-			  << channel.channel_id<<"' AND Forder_status ='"<<ORDER_SUCCESS<<"' group by Fmch_id";
-
-		iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),mchMVector);
-		if(iRet == 1)
+		for(size_t i = 0; i < resMVector.size(); i++)
 		{
-			for(size_t i = 0; i < mchMVector.size(); i++)
-			{
-				MchBillSum mchbillsum;
-				mchbillsum.Reset();
-				mchbillsum.total_count = atoi(mchMVector[i]["total_count"].c_str());
-				mchbillsum.total_amount = atol(mchMVector[i]["total_amount"].c_str());
-				mchbillsum.total_fee =  atol(mchMVector[i]["mch_rate_val"].c_str());
+			MchBillSum mchbillsum;
+			mchbillsum.Reset();
+			mchbillsum.order_no         = resMVector[i]["Forder_no"];
+			mchbillsum.mch_id 			= resMVector[i]["Fmch_id"];
+			mchbillsum.channel_id 		= resMVector[i]["Fpay_channel_id"];
+			mchbillsum.channel_name 	= resMVector[i]["Fpay_channel"];
+			mchbillsum.total_amount 	= resMVector[i]["Ftotal_amount"] == "" ? 0:atol(resMVector[i]["Ftotal_amount"].c_str());
+			mchbillsum.total_fee 		= resMVector[i]["Fmch_rate_val"] == "" ? 0:atol(resMVector[i]["Fmch_rate_val"].c_str());    //手续费
+			mchbillsum.net_amount       = atol(resMVector[i]["Ftotal_amount"].c_str());   //无退款，交易净额 = 支付金额
+			mchbillsum.pending_amount   = atol(resMVector[i]["Ftotal_amount"].c_str()) - atol(resMVector[i]["Fmch_rate_val"].c_str());  //结算金额
 
-				mchPayBillMap.insert(std::make_pair(mchMVector[i]["Fmch_id"], mchbillsum));
-			}
+			InserIntoMchBill(mchbillsum,FUND_TYPE_MCH);
 		}
-
-		//商户退款
-		mchMVector.clear();
-		sqlss.str("");
-		sqlss <<"SELECT Fmch_id,count(*) as refund_count,sum(Frefund_amount) as refund_amount FROM "
-			  <<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
-			  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' AND Fpay_channel_id='"
-			  << channel.channel_id<<"' AND Forder_status ='"<<ORDER_REFUND<<"' group by Fmch_id";
-
-		iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),mchMVector);
-		if(iRet == 1)
-		{
-			for(size_t i = 0; i < mchMVector.size(); i++)
-			{
-				MchBillSum mchbillsum;
-				mchbillsum.Reset();
-				mchbillsum.refund_count = atoi(mchMVector[i]["refund_count"].c_str());
-				mchbillsum.refund_amount = atol(mchMVector[i]["refund_amount"].c_str());
-
-				mchRefundBillMap.insert(std::make_pair(mchMVector[i]["Fmch_id"], mchbillsum));
-			}
-		}
-
-		//商户对账记录入库
-		for(auto mch_iter: mchPayBillMap)
-		{
-			//std::map<std::string, MchBillSum>::iterator ref_iter;
-			MchBillSum mchsum;
-			mchsum.Reset();
-
-			mchsum.mch_id = mch_iter.first;
-			mchsum.total_amount = mch_iter.second.total_amount;
-			mchsum.total_count = mch_iter.second.total_count;
-			mchsum.net_amount = mch_iter.second.total_amount;
-			mchsum.total_fee = mch_iter.second.total_fee;
-
-			auto ref_iter = mchRefundBillMap.find(mch_iter.first);
-			if(ref_iter != mchRefundBillMap.end())
-			{
-				mchsum.net_amount = mchsum.total_amount - ref_iter->second.refund_amount; //净额
-				mchsum.refund_count = ref_iter->second.refund_count;
-				mchsum.refund_amount = ref_iter->second.refund_amount;
-			}
-
-			InserIntoMchBill(channel,mchsum);
-		}
-
 	}
 
 }
 
-void CCreateMchBill::InserIntoMchBill(ChannelInfo& channel,MchBillSum& mch_bill)
+void CCreateMchBill::CreateChanBill()
+{
+	CDEBUG_LOG("GetChannelData begin ................................");
+
+	int iRet;
+	SqlResultMapVector resMVector;
+	MchBillSum mchsum;
+
+	//
+	sqlss.str("");
+	sqlss <<"SELECT Forder_no,Fmch_id,Fpay_channel_id,Fagent_id,Ftotal_amount,Fchannel_profit FROM "
+		  <<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL
+		  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time
+		  <<"' AND Forder_status = 'SUCCESS';";
+	iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
+	if(iRet == 1)
+	{
+		for(size_t i = 0; i < resMVector.size(); i++)
+		{
+			MchBillSum mchbillsum;
+			mchbillsum.Reset();
+
+			mchbillsum.order_no         = resMVector[i]["Forder_no"];
+			mchbillsum.mch_id 			= resMVector[i]["Fagent_id"];
+			mchbillsum.channel_id 		= resMVector[i]["Fpay_channel_id"];
+			//mchbillsum.channel_name 	= resMVector[i]["Fpay_channel"];
+			mchbillsum.total_amount 	= resMVector[i]["Ftotal_amount"] == "" ? 0:atol(resMVector[i]["Ftotal_amount"].c_str());
+			mchbillsum.pending_amount   = resMVector[i]["Fchannel_profit"] == "" ? 0:atol(resMVector[i]["Fchannel_profit"].c_str());  //结算金额
+
+			InserIntoMchBill(mchbillsum,FUND_TYPE_CH);
+
+		}
+	}
+}
+
+void CCreateMchBill::InserIntoMchBill(MchBillSum& mch_bill,const char* fund_type)
 {
 	int iRet = 0;
 //	mch_bill.total_count = mch_bill.total_count.empty() ? "0":mch_bill.total_count;
@@ -257,12 +222,11 @@ void CCreateMchBill::InserIntoMchBill(ChannelInfo& channel,MchBillSum& mch_bill)
 
 	sqlss.str("");
 	sqlss <<"INSERT INTO "<<ROUTE_BILL_DB<<"."<<MCH_CHECK_BILL
-		  <<" (Fmch_id,Fbill_date,Fpay_channel_id,Fpay_channel,Ftrade_count,Ftrade_amount,Frefund_count,"
-		  <<"Frefund_amount,Fnet_amount,Ftotal_fee) values('"
-		  <<mch_bill.mch_id<<"','"<<m_InParams["bill_date"]<<"','"<<channel.channel_id<<"','"<<channel.channel_name
-		  <<"',"<<mch_bill.total_count<<","<<mch_bill.total_amount
-		  <<","<<mch_bill.refund_count<<","<<mch_bill.refund_amount
-		  <<","<<mch_bill.net_amount<<","<<mch_bill.total_fee<<");";
+		  <<" (Forder_no,Ffund_type,Ffund_id,Fbill_date,Fpay_channel_id,Fpay_channel,Ftrade_amount,"
+		  <<"Frefund_amount,Fnet_amount,Ftotal_fee,Fpending_amount,Faccount_type,Faccount_status) values('"<<mch_bill.order_no<<"','"
+		  <<fund_type<<"','"<<mch_bill.mch_id<<"','"<<m_InParams["bill_date"]<<"','"<<mch_bill.channel_id<<"','"<<mch_bill.channel_name
+		  <<"',"<<mch_bill.total_amount<<","<<mch_bill.refund_amount
+		  <<","<<mch_bill.net_amount<<","<<mch_bill.total_fee<<","<<mch_bill.pending_amount<<",'2201','0');";
 
     iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
     if(iRet != 1)
@@ -273,6 +237,129 @@ void CCreateMchBill::InserIntoMchBill(ChannelInfo& channel,MchBillSum& mch_bill)
 
 }
 
+void CCreateMchBill::AccountingCheckin()
+{
+	int iRet;
+	char szRecvBuff[1024] = {0};
+	StringMap paramMap;
+	StringMap recvMap;
+	SqlResultMapVector billInfoVector;
+	CSocket* accountSocket = Singleton<CSpeedPosConfig>::GetInstance()->GetAccountServerSocket();
+
+	string strAccListID;
+
+    sqlss.str("");
+    sqlss <<"select Forder_no,Ffund_type,Fpay_channel_id,Ffund_id,Fpending_amount from "
+    	  <<ROUTE_BILL_DB<<"."<<MCH_CHECK_BILL
+		  <<" where  Fbill_date = '"<<m_InParams["bill_date"]<<"';";
+
+    iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),billInfoVector);
+    if(iRet == 1)  //有记录
+    {
+		for(unsigned int i = 0; i < billInfoVector.size(); i++)
+		{
+			if(atoi(billInfoVector[i]["Fpending_amount"].c_str()) <= 0)
+			{
+				continue;
+			}
+			strAccListID.clear();
+			strAccListID = GetAccountSeqNo();
+			paramMap.clear();
+			memset(szRecvBuff,0x00,sizeof(szRecvBuff));
+			paramMap.insert(StringMap::value_type("cmd","1008"));
+			paramMap.insert(StringMap::value_type("ver","1.0"));
+
+			JsonMap  bizCJsonMap;
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("order_no"), billInfoVector[i]["Forder_no"]));           //订单号
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("accounting_type"), "2201"));
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("total_fee"),billInfoVector[i]["Fpending_amount"]));    //转入金额
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("tran_fee"), billInfoVector[i]["Fpending_amount"]));   //交易金额
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("account_list_id"),strAccListID ));    //记账流水
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("from_user_id"), billInfoVector[i]["Ffund_id"])); //转出账号
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("from_user_type"), billInfoVector[i]["Ffund_type"]));  //转出方用户类型
+			//bizCJsonMap.insert(JsonMap::value_type(JsonType("from_type"), "CNY"));
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("to_user_id"), billInfoVector[i]["Ffund_id"]));  //转入账号
+			bizCJsonMap.insert(JsonMap::value_type(JsonType("to_user_type"), billInfoVector[i]["Ffund_type"]));  //转入方用户类型
+			//bizCJsonMap.insert(JsonMap::value_type(JsonType("to_type"), "CNY"));
+
+			std::string bizContent = JsonUtil::objectToString(bizCJsonMap);
+			paramMap.insert(std::make_pair("biz_content", bizContent));
+
+
+			accountSocket->SendAndRecvLineEx(paramMap,szRecvBuff,sizeof(szRecvBuff),"\r\n");
+			CDEBUG_LOG("recv Account Msg [%s]",szRecvBuff);
+
+			if(NULL == szRecvBuff||strlen(szRecvBuff) == 0)  //
+			{
+				CDEBUG_LOG("Account Check in fail !!,err_msg[%s]",szRecvBuff);
+				throw(CTrsExp(ERR_CHECKIN_ACCOUNT,"请求入账操作失败!!"));
+			}
+
+			cJSON* root = cJSON_Parse(szRecvBuff);
+
+			string ret_code = cJSON_GetObjectItem(root, "ret_code")->valuestring;
+			string ret_msg = cJSON_GetObjectItem(root, "ret_msg")->valuestring;
+
+			if(ret_code == "0")
+			{
+				UpdateCheckStatus(billInfoVector[i]["Forder_no"],billInfoVector[i]["Ffund_id"],strAccListID,ACCOUNT_SUCCESS,ret_msg);
+			}
+			else
+			{
+				UpdateCheckStatus(billInfoVector[i]["Forder_no"],billInfoVector[i]["Ffund_id"],strAccListID,ACCOUNT_FAIL,ret_msg);
+
+			}
+			CDEBUG_LOG(">>>>>>>>>>>>>end>>>>>>>>>>>>>>>>");
+
+		}
+    }
+
+}
+
+void CCreateMchBill::UpdateCheckStatus(const string& order_no,const string& fund_id,const string& account_no,const string& acc_status,const string& acc_desc)
+{
+	//根据账单日期和用户类型确认一笔交易
+	int iRet = 0;
+	sqlss.str("");
+	//更新记账流水和记账状态
+	sqlss <<" UPDATE "<<ROUTE_BILL_DB<<"."<<MCH_CHECK_BILL
+		  <<" SET Faccount_serial_no = '"<<account_no<<"', Faccount_status = '"<<acc_status
+		  <<"',Faccount_desc = '"<<acc_desc
+		  <<"',Fmodify_time = now() where Forder_no ='"<<order_no
+		  <<"' and Ffund_id = '"<<fund_id<<"';";
+
+    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+    if(iRet != 1)
+    {
+    	CERROR_LOG("update t_mch_check_bill fail!!!");
+    	throw(CTrsExp(UPDATE_DB_ERR,"update t_mch_check_bill fail!!!"));
+    }
+
+}
+
+std::string CCreateMchBill::GetAccountSeqNo()
+{
+	//CSocket* idSocket = Singleton<CSpeedPosConfig>::GetInstance()->GetIdServerSocket();
+
+	string strAccountSeq;
+	StringMap paramMap;
+	StringMap recvMap;
+
+	paramMap.insert(StringMap::value_type("cmd","8"));
+
+	CallIdServer(paramMap,recvMap);
+
+	if(recvMap["retcode"] != "0")
+	{
+		CERROR_LOG("call id server fail!");
+		throw(CTrsExp(ERR_CALL_ID_SERVER_FAIL, "call id server fail!"));
+	}
+	strAccountSeq = recvMap["order_no"];
+
+	CDEBUG_LOG("Create Account Seqno :[%s]",strAccountSeq.c_str());
+
+	return strAccountSeq;
+}
 
 void CCreateMchBill::SetRetParam()
 {

@@ -17,7 +17,8 @@
 #include "../Base/common/comm_tools.h"
 #include "CheckParameters.h"
 #include "CRouteBillBase.h"
-
+#include "util/tc_base64.h"
+#include "util/tc_file.h"
 
 class CDownLoadCheckBill : public IUrlProtocolTask
 {
@@ -65,10 +66,14 @@ protected:
 
 	void SetRetParam();
 
+	void GetSpeedPosBill(const std::string& factor_id);
+
 
 	NameValueMap m_InParams;
 	NameValueMap m_RetMap;
 	JsonMap m_ContentJsonMap;
+
+	CRouteBillBusiConf* pBillBusConfig;
 
 	vector<string> factor_vec;
 	string m_reqMsg;

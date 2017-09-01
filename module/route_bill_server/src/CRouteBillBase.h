@@ -37,13 +37,15 @@
 #define BILL_ABNORMAL       "t_route_bill_abnormal"
 #define BILL_DISTRIBUTION   "t_route_bill_distribution"
 #define MCH_CHECK_BILL      "t_mch_check_bill"
+#define SWIFT_CHECK_BILL    "t_route_swiftpass_bill"
+#define SPEEDPOS_CHENK_BILL "t_route_speedpos_bill"
 
 
 #define ORDER_SUCCESS       "SUCCESS"
 #define ORDER_REFUND        "REFUND"
 
 #define FUND_TYPE_MCH       "mch"
-#define FUND_TYPE_CH        "ch"
+#define FUND_TYPE_CH        "factor"
 #define FUND_TYPE_BM        "bm"
 #define FUND_TYPE_SERV      "serv"
 
@@ -57,6 +59,9 @@
 #define CHECK_BILL_SUCC                1    //平账
 #define CHECK_BILL_FAIL                2    //不平
 
+#define ACCOUNT_INIT                 "0"    //未记账
+#define ACCOUNT_SUCCESS              "1"    //记账成功
+#define ACCOUNT_FAIL                 "2"    //记账失败
 
 /*
  *   深圳浦发请求报文一些宏定义

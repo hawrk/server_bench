@@ -8,6 +8,8 @@
 #include "CDownLoadCheckBill.h"
 #include "CCurlClient.h"
 #include "tinyxml2.h"
+#include "gzip.h"
+//#include "gzipbase64.h"
 
 INT32 CDownLoadCheckBill::Execute( NameValueMap& mapInput, char** outbuf, int& outlen )
 {
@@ -33,6 +35,8 @@ INT32 CDownLoadCheckBill::Execute( NameValueMap& mapInput, char** outbuf, int& o
 
 	    CallPayGate2GetFactorID();
 
+	    pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBusiConf();
+
 	    for(auto factor_iter : factor_vec)
 	    {
 	    	string strResBody;
@@ -50,6 +54,10 @@ INT32 CDownLoadCheckBill::Execute( NameValueMap& mapInput, char** outbuf, int& o
 
 	    		SendMsgToSwift(inparamMap,factor_iter,strResBody);
 	    	}
+			if(m_InParams["pay_channel"] == "FJHXBANK")  //福建海峡银行
+			{
+				GetSpeedPosBill(factor_iter);
+			}
 
 	    }
 
@@ -167,8 +175,6 @@ void CDownLoadCheckBill::CallPayGate2GetFactorID()
 
 void CDownLoadCheckBill::CreateMsgBody(const string& factor_id)
 {
-	CRouteBillBusiConf* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBusiConf();
-
 	std::string szResBody = "";
 	StringMap paramMap;
 	paramMap.insert(std::make_pair("requestNo", GetSysTimeUsecEx(time(NULL))));
@@ -188,19 +194,22 @@ void CDownLoadCheckBill::CreateMsgBody(const string& factor_id)
 
 void CDownLoadCheckBill::CreateSwiftMsgBody(StringMap& paramMap,const string& factor_id)
 {
-	CRouteBillBusiConf* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBusiConf();
 	time_t tNow = time(NULL);
 	std::string strNonceStr = toString(tNow);
 
 	std::string szResBody = "";
 	//StringMap paramMap;
-	paramMap.insert(std::make_pair("service", SERVICE_AGENT_TYPE));
+	//test
+	paramMap.insert(std::make_pair("service", SERVICE_MCH_TYPE));
+	paramMap.insert(std::make_pair("mch_id", "7551000001"));
+
+	//proc
+//	paramMap.insert(std::make_pair("service", SERVICE_AGENT_TYPE));
+//	paramMap.insert(std::make_pair("mch_id", factor_id));
+
 	paramMap.insert(std::make_pair("version", SWIFT_VERSION));
-	//paramMap.insert(std::make_pair("charset", SWIFT_CHARSET));
 	paramMap.insert(std::make_pair("bill_date", m_InParams["bill_date"]));
 	paramMap.insert(std::make_pair("bill_type", SWIFT_BILL_TYPE));
-	//paramMap.insert(std::make_pair("sign_type", SWIFT_SIGN_TYPE));
-	paramMap.insert(std::make_pair("mch_id", factor_id));
 	paramMap.insert(std::make_pair("nonce_str", strNonceStr));
 
 	m_reqMsg.clear();
@@ -289,18 +298,20 @@ string CDownLoadCheckBill::CreateMD5Sign(const string& factor_id, const string& 
 	AuthReq.insert(std::make_pair("cmd", "1002"));  //MD5 签名生成
 
 	JsonMap  bizCJsonMap;
-	bizCJsonMap.insert(JsonMap::value_type(JsonType("type"), JsonType("channel")));
 
-	bizCJsonMap.insert(JsonMap::value_type(JsonType("src_str"), JsonType(plainText)));
-	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_channel_id"), JsonType(m_InParams["pay_channel"])));  //
-	bizCJsonMap.insert(JsonMap::value_type(JsonType("channel_factor_id"), JsonType(factor_id)));
-	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_type"), JsonType("upay")));
-//
-//	bizCJsonMap.insert(JsonMap::value_type(JsonType("type"), JsonType("channel_mch")));
+//	bizCJsonMap.insert(JsonMap::value_type(JsonType("type"), JsonType("channel")));
 //	bizCJsonMap.insert(JsonMap::value_type(JsonType("src_str"), JsonType(plainText)));
-//	bizCJsonMap.insert(JsonMap::value_type(JsonType("mch_id"), JsonType("10000015")));  //
-//	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_channel_id"), JsonType("GZPF")));
+//	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_channel_id"), JsonType(m_InParams["pay_channel"])));  //
+//	bizCJsonMap.insert(JsonMap::value_type(JsonType("channel_factor_id"), JsonType(factor_id)));
 //	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_type"), JsonType("upay")));
+//
+
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("type"), JsonType("channel_mch")));
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("src_str"), JsonType(plainText)));
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("mch_id"), JsonType("10000102")));  // 测试环境用账号
+	//bizCJsonMap.insert(JsonMap::value_type(JsonType("mch_id"), JsonType("10000015")));  //开发环境用账号
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_channel_id"), JsonType("GZPF")));
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_type"), JsonType("upay")));
 
 	std::string bizContent = JsonUtil::objectToString(bizCJsonMap);
 
@@ -308,7 +319,7 @@ string CDownLoadCheckBill::CreateMD5Sign(const string& factor_id, const string& 
 
 	CSocket *pSocket = Singleton<CSpeedPosConfig>::GetInstance()->GetAuthServerSocket();
 
-	//CDEBUG_LOG("Send to sign Msg =[%s]",bizContent.c_str());
+	CDEBUG_LOG("Send to Auth sign Msg =[%s]",bizContent.c_str());
 
 	char szRsp[1024 * 10] = { 0 };
 	char szSign[1024 * 10] = { 0 };
@@ -321,7 +332,7 @@ string CDownLoadCheckBill::CreateMD5Sign(const string& factor_id, const string& 
 	}
 	//pSocket->Close();
 
-	//CDEBUG_LOG("szRsp=[%s]\n", szRsp);
+	CDEBUG_LOG("Auth sign szRsp=[%s]\n", szRsp);
 	cJSON* root = cJSON_Parse(szRsp);
 	if (0 != strcmp(cJSON_GetObjectItem(root, "ret_code")->valuestring, "0")){
 		CERROR_LOG("ret_code:[%s] ret_msg:[%s]\n", cJSON_GetObjectItem(root, "ret_code")->valuestring, cJSON_GetObjectItem(root, "ret_msg")->valuestring);
@@ -348,6 +359,8 @@ string CDownLoadCheckBill::CreateMD5Sign(const string& factor_id, const string& 
 void CDownLoadCheckBill::SendMsgToBank(const std::string& factor_id, std::string& szResBody)
 {
 	BEGIN_LOG(__func__);
+
+	CRouteBillBusiConf* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBusiConf();
 
 	struct timeval stStart;
 	struct timeval stEnd;
@@ -389,12 +402,51 @@ void CDownLoadCheckBill::SendMsgToBank(const std::string& factor_id, std::string
 	}
 
 	CDEBUG_LOG("file_detail :[%s],fileName = [%s]",urlRspMap["fileContentDetail"].c_str(),urlRspMap["fileName"].c_str());
+	//TODO: test
+	//base64 decode
 
+	//urlRspMap["fileContentDetail"] = "H4sIAAAAAAAAAK2SS0oDQRCG94J38AAdqGe/PI8nMBfIQkEUXJigO3UlqDgrEVT0MjOTeAurNW4mDYnoYpoZ+q/pr78qAgwQURwjiAADAElScIAQXff20L5f90d386tJP23alwsXLbCsQaBoRYlDUBUM3mrQld0RxBHKDkKmmEEcgv3wa7WHWIgw+mpyPr1sn28+bk8WzWR3e4v+gicqIJqAgh2YSOIQT7JKOZQLmKOUlnhWnria7B+PF82smx12Z2vwkJZ43cF9+3renT7VBDKKcSW0b/YqRelAC2MWqggMrNXk5gI3IkRITJG9FzKbwDR0iBlSZl4ltFulevIfsETtnWKQyGUAi7iV1tpIGQyy+15/WkuaqslftDatm7zCpUFZUSFCgJW+hiwxsx9aU1D2UE2O9/bHhvUJVWYW9LADAAA=";
+	string decode_msg = tars::TC_Base64::decode(urlRspMap["fileContentDetail"]);
+	//CDEBUG_LOG("decode_msg = [%s]",decode_msg.c_str());
+
+	//gzip depress
+//	unsigned char *buf = NULL;
+//	buf  = new unsigned char[decode_msg.length() + 1];
+
+
+	unsigned char buf[10240] = {0};
+	unsigned long len;
+	gzdecompress((unsigned char*)decode_msg.c_str(),(unsigned long)decode_msg.length(),buf,&len);
+	CDEBUG_LOG("out:[%s]",buf);
+
+	string file_content = (char*)buf;
+
+//	string file_content = decode_gzipbase64(urlRspMap["fileContentDetail"]);
+//	CDEBUG_LOG("file_content = [%s]",file_content.c_str());
+
+	//文件路径+ 通道名 + 通道代理ID + 日期
+	string file_name = pBillBusConfig->BusiConfig.m_spdb_bill_path + m_InParams["pay_channel"] + "_"
+			+ factor_id + "_" + m_InParams["bill_date"];
+	CDEBUG_LOG("file_name = [%s]",file_name.c_str());
+	tars::TC_File::save2file(file_name,file_content);
+
+//	if(tars::TC_File::getFileSize(file_name) == 0)
+//	{
+//		CDEBUG_LOG("no data");
+//	}
+//	else
+//	{
+//		CDEBUG_LOG("file_size = [%d]",tars::TC_File::getFileSize(file_name));
+//	}
+
+	//delete buf;
 }
 
 void CDownLoadCheckBill::SendMsgToSwift(const StringMap& paramMap,const std::string& factor_id, std::string& szResBody)
 {
 	BEGIN_LOG(__func__);
+
+	CRouteBillBusiConf* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBusiConf();
 
 	struct timeval stStart;
 	struct timeval stEnd;
@@ -422,13 +474,12 @@ void CDownLoadCheckBill::SendMsgToSwift(const StringMap& paramMap,const std::str
 		throw (CTrsExp(ERR_PARSE_XML_FAIL, "ERROR:create xml element node fail!!"));
 	}
 
-
 	for(auto iter : paramMap)
 	{
 		SetOneFieldToXml(&doc_wx, pXmlNode,iter.first.c_str(),iter.second.c_str(),false);
 	}
-	SetOneFieldToXml(&doc_wx, pXmlNode, "sign", reqSign.c_str(), false);
 
+	SetOneFieldToXml(&doc_wx, pXmlNode, "sign", reqSign.c_str(), false);
 	doc_wx.Accept(&oPrinter);
 	reqMsg = oPrinter.CStr();
 
@@ -444,17 +495,36 @@ void CDownLoadCheckBill::SendMsgToSwift(const StringMap& paramMap,const std::str
 	int iUsedTime = CalDiff(stStart, stEnd);
 	CDEBUG_LOG("szResHead=[%s], szResBody=[%s] iUsedTime[%d] \n", szResHead.c_str(), szResBody.c_str(), iUsedTime);
 
-	Kv2Map(szResBody, urlRspMap);
-
-//	if(urlRspMap["respCode"] != BANK_RET_SUCCESS)
-//	{
-//		CERROR_LOG("bank ret :err_code:[%s] err_code_msg:[%s]\n", urlRspMap["respCode"].c_str(), urlRspMap["respDesc"].c_str());
-//		throw (CTrsExp(ERR_GET_BANK_RESP, urlRspMap["respDesc"]));
-//	}
-
-	CDEBUG_LOG("file_detail :[%s],fileName = [%s]",urlRspMap["fileContentDetail"].c_str(),urlRspMap["fileName"].c_str());
+	string file_name = pBillBusConfig->BusiConfig.m_spdb_bill_path + m_InParams["pay_channel"] + "_"
+			+ factor_id + "_" + m_InParams["bill_date"];
+	CDEBUG_LOG("swift file_name = [%s]",file_name.c_str());
+	tars::TC_File::save2file(file_name,szResBody);
 
 }
+
+void CDownLoadCheckBill::GetSpeedPosBill(const std::string& factor_id)
+{
+	CDEBUG_LOG("Begin ...");
+
+	string szRemotePath = pBillBusConfig->BusiConfig.m_speedpos_remote_path + "/" +factor_id + "/webbill";
+
+	char szCmd[512] = { 0 };
+	memset(szCmd,0x00,sizeof(szCmd));
+	
+	snprintf(szCmd, sizeof(szCmd), "sh %s %s %s %s %s %s %s %s %s",
+			pBillBusConfig->BusiConfig.m_get_speedpos_bill_shell.c_str(), 
+			pBillBusConfig->BusiConfig.m_speedpos_sftp_ip.c_str(), 
+			pBillBusConfig->BusiConfig.m_speedpos_sftp_port.c_str(),
+			pBillBusConfig->BusiConfig.m_speedpos_sftp_user.c_str(), 
+			pBillBusConfig->BusiConfig.m_speedpos_sftp_pwd.c_str(),
+			factor_id.c_str(),
+			m_InParams["bill_date"].c_str(),
+			szRemotePath.c_str(),
+			pBillBusConfig->BusiConfig.m_spdb_bill_path.c_str());
+	CDEBUG_LOG("sh command szCmd = [%s]",szCmd);
+	system(szCmd);
+}
+
 
 
 void CDownLoadCheckBill::SetRetParam()

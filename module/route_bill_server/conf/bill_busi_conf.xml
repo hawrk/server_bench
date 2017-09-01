@@ -6,12 +6,22 @@
     </sys_cfg>
     
     <databases>
-        <dbconfig ip="10.100.120.81" port="3306"   dbnum="1"  type="1" user="root" pwd="123456" dbname = ""/>
+       <dbconfig ip="10.100.120.81" port="3306"   dbnum="1"  type="1" user="speedpos" pwd="speedpos@123" dbname = ""/>
+       <dbconfig ip="10.100.120.82" port="3306"   dbnum="2"  type="1" user="speedpos" pwd="speedpos@123" dbname = ""/>
     </databases>
 
     <chinacardpos_url>http://121.201.111.67:9080/</chinacardpos_url>
-    <chinacardpos_billpath>/usr/local/services/spp_route_bill_server-1.0/client/bill_server/data/</chinacardpos_billpath>
+    <chinacardpos_billpath>../client/bill_server/data/</chinacardpos_billpath>
     <file2db_shell_path>../client/bill_server/conf/BillDatetoDB.sh</file2db_shell_path>
+    <bill_file_prefix>440126</bill_file_prefix>
+
+    <swiftpass_url>https://download.swiftpass.cn/gateway</swiftpass_url>
+    <speedpos_bill_shell_path>../client/bill_server/conf/getSpeedposBill.sh</speedpos_bill_shell_path>
+    <speedpos_sftp_ip></speedpos_sftp_ip>
+    <speedpos_sftp_port></speedpos_sftp_port>
+    <speedpos_sftp_user></speedpos_sftp_user>
+    <speedpos_sftp_pwd></speedpos_sftp_pwd>
+    <speedpos_remote_path></speedpos_remote_path>
 
 </root>
 

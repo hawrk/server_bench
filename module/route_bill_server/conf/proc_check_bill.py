@@ -15,7 +15,7 @@ import json
 SERVER_IP = "10.100.120.71"
 SERVER_PORT = 40800
 
-bank_list = ["SZPF"]
+bank_list = ["SZPF","SWIFT","SPEEDPOS"]
 
 def string_msg(bank,date):
     data = {"bill_date":date,"pay_channel":bank}

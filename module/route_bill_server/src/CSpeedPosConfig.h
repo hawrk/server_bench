@@ -31,6 +31,7 @@ class CSpeedPosConfig : public CObject
 			m_paygateSocket = NULL;
 			m_authSocket = NULL;
 			m_billSocket = NULL;
+			m_accountSocket = NULL;
 			m_routeBillBusiConf = NULL;
 		}
 		virtual ~CSpeedPosConfig(){
@@ -75,6 +76,12 @@ class CSpeedPosConfig : public CObject
 			{
 				delete m_billSocket;
 				m_billSocket = NULL;
+			}
+
+			if(m_accountSocket)
+			{
+				delete m_accountSocket;
+				m_accountSocket = NULL;
 			}
 
 
@@ -137,6 +144,11 @@ class CSpeedPosConfig : public CObject
 			return m_billSocket;
 		}
 
+		CSocket* GetAccountServerSocket()
+		{
+			return m_accountSocket;
+		}
+
 
 private:
 
@@ -167,6 +179,9 @@ private:
 
         CSocket* m_billSocket;
 		CommServer m_stbillServer;
+
+        CSocket* m_accountSocket;
+		CommServer m_stAccountServer;
 
         	
 		string m_stBaseDbName;

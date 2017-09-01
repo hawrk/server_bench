@@ -50,6 +50,8 @@ INT32 CLiquidationTask::Execute( NameValueMap& mapInput, char** outbuf, int& out
 
 	    ProcLiquidation();
 
+	    //AccountCheckin();
+
 		//SetRetParam();
 	}
 	catch(CTrsExp& e)
@@ -138,20 +140,20 @@ void CLiquidationTask::CheckBillResult()
 	SqlResultSet outMap;
 
 	sqlss.str("");
-	sqlss	<<" SELECT count(*) as count FROM "
+	sqlss	<<" SELECT Fbill_result FROM "
 				<< ROUTE_BILL_DB<<"."<<BILL_SUMMARY
 				<<" WHERE Fbill_date = '"<<m_InParams["bill_date"]<<"' and Fpay_channel = '"<<m_InParams["pay_channel"]<<"';";
 
 	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),outMap);
-	if(iRet < 0)
-	{
-		CERROR_LOG("get t_route_bill_summary fail!!");
-		throw(CTrsExp(QRY_DB_ERR,"get t_route_bill_summary fail!!"));
-	}
-	if(atoi(outMap["count"].c_str()) == 0)
+	if(iRet == 0)  //无对账记录
 	{
 		CERROR_LOG("no check bill   data!!");
 		throw(CTrsExp(ERR_CHECK_BILL_NOT_EXIST,"未生成当日对账记录，无法清算!!"));
+	}
+	if(outMap["Fbill_result"] != "1")
+	{
+		CERROR_LOG("check bill fail, can't liquidation !!");
+		throw(CTrsExp(ERR_CHECK_BILL_NOT_EXIST,"当日对账不符，不允许清算!!"));
 	}
 
 	//检查是否已生成清分记录
@@ -253,10 +255,12 @@ void CLiquidationTask::GetChannelData()
 
 	//渠道表
 	sqlss.str("");
-	sqlss <<"SELECT Forder_no,Fmch_id,Fpay_channel_id,Fagent_id,count(*) as total_count,sum(Ftotal_amount) as total_amount,"
-		  <<" sum(Fchannel_profit) as channel_profit FROM "<<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL
-		  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' AND Fpay_channel_id='"
-		  <<m_InParams["pay_channel"]<<"' AND Forder_status = 'SUCCESS' group by Fagent_id";
+	sqlss <<"SELECT chan.Forder_no,chan.Fmch_id,chan.Fpay_channel_id,chan.Fagent_id,chan.Fagent_name,count(*) as total_count,"
+		  <<"sum(chan.Ftotal_amount) as total_amount,sum(chan.Fchannel_profit) as channel_profit FROM "
+		  <<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL <<" chan INNER JOIN "<<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL<<" bill"
+		  <<" ON chan.Forder_no = bill.Forder_no AND bill.Fcheck_status= 1 "
+		  <<" AND chan.Fpay_time >='"<<m_start_time<<"' AND chan.Fpay_time <='"<<m_end_time<<"' AND chan.Fpay_channel_id='"
+		  <<m_InParams["pay_channel"]<<"' AND chan.Forder_status = 'SUCCESS' group by Fagent_id";
 		//还要加上对账成功的条件
 
 	iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
@@ -264,30 +268,53 @@ void CLiquidationTask::GetChannelData()
 	{
 		for(size_t i = 0; i < resMVector.size(); i++)
 		{
-			//校验是否是平账的记录
-			string order_no =  resMVector[i]["Forder_no"];
-			if(!CheckBillSuccess(order_no))  //对账不平的记录跳过
-			{
-				CDEBUG_LOG("order_no:[%s] check_status not success.",order_no.c_str());
-				continue;
-			}
 			OrderPayLiquidate orderpayliq;
 			orderpayliq.Reset();
-			orderpayliq.mch_id = resMVector[i]["Fmch_id"];
-			orderpayliq.pay_channel = resMVector[i]["Fpay_channel_id"];
-			orderpayliq.agent_id = resMVector[i]["Fagent_id"];
-			orderpayliq.total_count = atoi(resMVector[i]["total_count"].c_str());
-			orderpayliq.total_amount = resMVector[i]["total_amount"] == "" ?0 :atol(resMVector[i]["total_amount"].c_str());
-			orderpayliq.agent_profit = resMVector[i]["channel_profit"] == "" ? 0 :atol(resMVector[i]["channel_profit"].c_str());
+			orderpayliq.mch_id 				= resMVector[i]["Fmch_id"];
+			orderpayliq.pay_channel 		= resMVector[i]["Fpay_channel_id"];
+			orderpayliq.mch_name 			= resMVector[i]["Fagent_name"];
+			orderpayliq.agent_id 			= resMVector[i]["Fagent_id"];
+			orderpayliq.total_count 		= atoi(resMVector[i]["total_count"].c_str());
+			orderpayliq.total_amount 		= resMVector[i]["total_amount"] == "" ?0 :atol(resMVector[i]["total_amount"].c_str());
+			orderpayliq.agent_profit 		= resMVector[i]["channel_profit"] == "" ? 0 :atol(resMVector[i]["channel_profit"].c_str());
 
 			orderChannelLiquiMap.insert(std::make_pair(orderpayliq.agent_id, orderpayliq));
 
 		}
 	}
 
-	//暂时不考虑渠道退款
+	//渠道退款
+	sqlss.str("");
+	sqlss <<"SELECT chan.Forder_no,chan.Fmch_id,chan.Fpay_channel_id,chan.Fagent_id,chan.Fagent_name,count(*) as total_count,"
+		  <<"sum(chan.Ftotal_amount) as total_amount,sum(chan.Fchannel_profit) as channel_profit FROM "
+		  <<ROUTE_BILL_DB<<"."<<T_ROUTE_CHANNEL<<" chan INNER JOIN "<<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL<<" bill"
+		  <<" ON chan.Forder_no = bill.Forder_no AND bill.Fcheck_status= 1 "
+		  <<" AND chan.Fpay_time >='"<<m_start_time<<"' AND chan.Fpay_time <='"<<m_end_time<<"' AND chan.Fpay_channel_id='"
+		  <<m_InParams["pay_channel"]<<"' AND chan.Forder_status = 'REFUND' group by Fagent_id";
+
+	iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
+	if(iRet == 1)  //有记录
+	{
+		for(size_t i = 0; i < resMVector.size(); i++)
+		{
+			OrderPayLiquidate orderpayliq;
+			orderpayliq.Reset();
+			orderpayliq.mch_id 				= resMVector[i]["Fmch_id"];
+			orderpayliq.pay_channel 		= resMVector[i]["Fpay_channel_id"];
+			orderpayliq.mch_name		 	= resMVector[i]["Fagent_name"];
+			orderpayliq.agent_id 			= resMVector[i]["Fagent_id"];
+			orderpayliq.refund_count 		= atoi(resMVector[i]["total_count"].c_str());
+			orderpayliq.refund_amount 		= resMVector[i]["total_amount"] == "" ?0 :atol(resMVector[i]["total_amount"].c_str());
+			orderpayliq.agent_profit 		= resMVector[i]["channel_profit"] == "" ? 0 :atol(resMVector[i]["channel_profit"].c_str());
+
+			orderChannelRefLiquiMap.insert(std::make_pair(orderpayliq.agent_id, orderpayliq));
+
+		}
+	}
+
 }
 
+//平账 返回 true,不平，返回 False
 bool CLiquidationTask::CheckBillSuccess(const string& order_no)
 {
 	INT32 iRet = 0;
@@ -317,12 +344,16 @@ void CLiquidationTask::ProcLiquidation()
 	CDEBUG_LOG("ProcLiquidation begin ................................");
 	long bm_profit = 0;
 	long serv_profit = 0;
+	long serv_amount = 0;
+	int serv_count = 0;
+	long serv_net_amount = 0;
 	OrderPayLiquidate pay_liq;
 	pay_liq.Reset();
 	std::map<std::string, OrderPayLiquidate>::iterator itRefund;
+	std::map<std::string, OrderPayLiquidate>::iterator itChanRefund;
 
-	CDEBUG_LOG("order trade bill num:[%d],refund bill num:[%d],channel bill num:[%d]",
-			orderPayLiquiMap.size(),orderRefundLiquiMap.size(),orderChannelLiquiMap.size());
+	CDEBUG_LOG("order trade bill num:[%d],refund bill num:[%d],channel bill num:[%d],channel refund bill no :[%d]",
+			orderPayLiquiMap.size(),orderRefundLiquiMap.size(),orderChannelLiquiMap.size(),orderChannelRefLiquiMap.size());
 
 	//算商户
 	for (auto order_iter : orderPayLiquiMap)
@@ -351,31 +382,60 @@ void CLiquidationTask::ProcLiquidation()
 		}
 		bm_profit += pay_liq.bm_profit;
 		serv_profit += pay_liq.serv_profit;
+		serv_amount += pay_liq.total_amount;
+		serv_count += pay_liq.total_count;
+		serv_net_amount += pay_liq.net_amount;
 
-		InsertLiquidationDB(FUND_TYPE_MCH,pay_liq);
+		if(pay_liq.mch_net_amount > 0)
+		{
+			InsertLiquidationDB(FUND_TYPE_MCH,pay_liq);
+		}
 
 	}
 
 	//算平台收益
-	pay_liq.serv_profit = serv_profit;
+	pay_liq.mch_net_amount = serv_profit;   //待结算金额 = 分润金额
+	pay_liq.serv_profit = serv_profit;    //分润金额
+	pay_liq.total_amount = serv_amount;   //平台总金额
+	pay_liq.total_count = serv_count;  //平台交易笔数
+	pay_liq.net_amount = serv_net_amount;  //交易净额
 	pay_liq.mch_id = "";
 	pay_liq.mch_name = "";
-	InsertLiquidationDB(FUND_TYPE_SERV,pay_liq);
+
+	if(pay_liq.serv_profit > 0)
+	{
+		InsertLiquidationDB(FUND_TYPE_SERV,pay_liq);
+	}
+
 
 	//算渠道
 	for (auto channel_iter : orderChannelLiquiMap)
 	{
 		pay_liq.Reset();
 		pay_liq.agent_id = channel_iter.first;
-		pay_liq.mch_id = channel_iter.second.mch_id;
+		pay_liq.mch_id = channel_iter.second.agent_id;
+		pay_liq.mch_name = channel_iter.second.mch_name;
 		pay_liq.pay_channel = channel_iter.second.pay_channel;
 		pay_liq.total_count = channel_iter.second.total_count;
 		pay_liq.total_amount = channel_iter.second.total_amount;
+		pay_liq.net_amount = channel_iter.second.total_amount;
 		//pay_liq.total_fee = channel_iter.second.total_fee;
 		pay_liq.mch_net_amount = channel_iter.second.agent_profit;
 		pay_liq.serv_profit = channel_iter.second.agent_profit;
 
-		InsertLiquidationDB(FUND_TYPE_CH,pay_liq);
+		if((itChanRefund = orderChannelRefLiquiMap.find(pay_liq.agent_id)) != orderChannelRefLiquiMap.end())
+		{
+			pay_liq.refund_count = itChanRefund->second.refund_count;
+			pay_liq.refund_amount = itChanRefund->second.refund_amount;
+			pay_liq.mch_net_amount -=  itChanRefund->second.agent_profit;
+			pay_liq.net_amount  = pay_liq.total_amount - pay_liq.refund_amount;
+			pay_liq.serv_profit  -= itChanRefund->second.agent_profit;
+		}
+
+		if(pay_liq.serv_profit > 0)
+		{
+			InsertLiquidationDB(FUND_TYPE_CH,pay_liq);
+		}
 
 	}
 
@@ -392,11 +452,12 @@ void CLiquidationTask::InsertLiquidationDB(const string& fund_type,OrderPayLiqui
 	sqlss <<"INSERT INTO "<<ROUTE_BILL_DB<<"."<<BILL_DISTRIBUTION
 		  <<" (Fbill_date,Fpay_channel,Ffund_type,Fcur_type,Fmch_id,Fmch_name,"
 		  <<"Ftrade_count,Ftrade_amount,Frefund_count,Frefund_amount,Fcost_fee,Fmch_fee,"
-		  <<"Ftrade_net_amount,Fpend_settle,Fshare_profit) values('"
+		  <<"Ftrade_net_amount,Fpend_settle,Fshare_profit,Faccount_type,Faccount_status"
+		  <<") values('"
 		  <<m_InParams["bill_date"]<<"','"<<m_InParams["pay_channel"]<<"','"<<fund_type<<"','CNY','"<<liq_map.mch_id
 		  <<"','"<<liq_map.mch_name<<"',"<<liq_map.total_count<<","<<liq_map.total_amount<<","<<liq_map.refund_count
 		  <<","<<liq_map.refund_amount<<","<<liq_map.bm_profit<<","<<liq_map.total_fee<<","<<liq_map.net_amount
-		  <<","<<liq_map.mch_net_amount<<","<<liq_map.serv_profit<<");";
+		  <<","<<liq_map.mch_net_amount<<","<<liq_map.serv_profit<<",'2202','0');";
 
     iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
     if(iRet != 1)
@@ -404,6 +465,54 @@ void CLiquidationTask::InsertLiquidationDB(const string& fund_type,OrderPayLiqui
     	CERROR_LOG("insert t_route_bill_distribution fail!!!");
     	throw(CTrsExp(INSERT_DB_ERR,"insert t_route_bill_distribution fail!!!"));
     }
+}
+
+void CLiquidationTask::AccountCheckin()
+{
+	int iRet;
+	char szRecvBuff[1024] = {0};
+	StringMap paramMap;
+	StringMap recvMap;
+	SqlResultMapVector billInfoVector;
+	CSocket* billSocket = Singleton<CSpeedPosConfig>::GetInstance()->GetBillServerSocket();
+
+    sqlss.str("");
+    sqlss <<"select Ffund_type,Fmch_id,Fpend_settle from "
+    	  <<ROUTE_BILL_DB<<"."<<BILL_DISTRIBUTION
+		  <<" where  Fbill_date = '"<<m_InParams["bill_date"]<<"' and Fpay_channel ='"<<m_InParams["pay_channel"]
+		  <<"' and Ffund_type in('mch','ch');";
+
+    iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),billInfoVector);
+    if(iRet == 1)  //有记录
+    {
+		for(unsigned int i = 0; i < billInfoVector.size(); i++)
+		{
+			paramMap.clear();
+			memset(szRecvBuff,0x00,sizeof(szRecvBuff));
+			//ver=1.0&cmd=9010&bill_date=20170725
+			paramMap.insert(StringMap::value_type("cmd","9300"));
+			paramMap.insert(StringMap::value_type("ver","1.0"));
+
+			paramMap.insert(StringMap::value_type("bill_date",m_InParams["bill_date"]));
+			paramMap.insert(StringMap::value_type("pay_channel_id",m_InParams["pay_channel"]));
+			if(billInfoVector[i]["Ffund_type"] == "mch")
+			{
+				paramMap.insert(StringMap::value_type("type","1"));
+			}
+			else if(billInfoVector[i]["Ffund_type"] == "ch")
+			{
+				paramMap.insert(StringMap::value_type("type","2"));
+			}
+			paramMap.insert(StringMap::value_type("fund_id",billInfoVector[i]["Fmch_id"]));
+			paramMap.insert(StringMap::value_type("account_type","2201"));  //清分冻结
+			paramMap.insert(StringMap::value_type("account_amount",billInfoVector[i]["Fshare_profit"]));
+
+			billSocket->SendAndRecvLineEx(paramMap,szRecvBuff,sizeof(szRecvBuff),"\r\n");
+			CDEBUG_LOG("recv Msg [%s]",szRecvBuff);
+
+		}
+    }
+
 }
 
 void CLiquidationTask::SetRetParam()

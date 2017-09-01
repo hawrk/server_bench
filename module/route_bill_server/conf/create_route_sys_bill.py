@@ -20,14 +20,14 @@ bank_list = ["SZPF"]
 
 def string_msg(bank,date):
     data = {"bill_date":date}
+    #data = {"pay_channel":bank}
     biz_content = json.dumps(data)
     content = {}
     content['ver'] = '1.0'
     content['cmd'] = '9010'
     content['src'] = '0'
     content['biz_content'] = biz_content
-    #后台接口暂时不根据通道进行对账单生成，默认取当日所有交易纪录
-    #content['pay_channel'] = bank
+    content["pay_channel"] = bank;
     str_values = urllib.urlencode(content)
     
     logging.info("content = [%s]",str_values)

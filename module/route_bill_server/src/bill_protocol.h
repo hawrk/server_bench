@@ -21,6 +21,12 @@ typedef struct _STBillSrvMainConf
 	string m_bill_file_prefix;    //对账文件前缀
 
 	string m_swiftpass_url;     //威富通请求URL
+	string m_get_speedpos_bill_shell;
+	string m_speedpos_sftp_ip;
+	string m_speedpos_sftp_port;
+	string m_speedpos_sftp_user;
+	string m_speedpos_sftp_pwd;
+	string m_speedpos_remote_path;
 
 }STBillSrvMainConf;
 
@@ -128,23 +134,33 @@ typedef struct _tagBankpayBillSummary
 //商户对账单数据
 typedef struct _tagMchBillSum
 {
+	string order_no;
 	string mch_id;
+	string agent_id;
+	string channel_id;
+	string channel_name;
 	int total_count;
 	long total_amount;
 	int refund_count;
 	long refund_amount;
 	long total_fee;
 	long net_amount;
+	long pending_amount;
 
 	void Reset()
 	{
+		order_no = "";
 		mch_id = "";
+		agent_id = "";
+		channel_id = "";
+		channel_name = "";
 		total_count = 0;
 		total_amount = 0;
 		refund_count = 0;
 		refund_amount = 0;
 		total_fee = 0;
 		net_amount = 0;
+		pending_amount = 0;
 	}
 }MchBillSum;
 

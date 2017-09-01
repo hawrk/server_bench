@@ -8,6 +8,7 @@
 #define   ERR_RECORD_EXIST            200005             //数据库记录已存在
 #define   ERR_PARSE_XML_FAIL          200006             //解析xml失败
 #define   ERR_PARSE_JSON_FAIL         200007             //解析Json失败
+#define   ERR_CALL_ID_SERVER_FAIL     200227             //调用ID server失败
 
 
 #define   ERR_CHECK_BILL_EXIST        900001            //当日对账记录已生在
@@ -20,6 +21,9 @@
 #define   ERR_BILL_FILE_NOT_EXIST     900008            //对账文件不存在
 #define   ERR_MCH_BILL_EXIST          900009            //商户对账单已生成
 #define   ERR_CHECK_BILL_NOT_EXIST    900010            //未生成当日对账记录
+#define   ERR_CHECKIN_ACCOUNT         900011            //入账操作失败
+#define   ERR_DATA_NOT_FOUND          900012            //数据库查找无数据
+#define   ERR_CALL_ORDER_SERV         900013            //调用订单服务失败
 
 
 #define   ERR_INVALID_PARAMS          200201             //关键入错错误

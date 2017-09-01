@@ -123,7 +123,20 @@ void CBillCheckTask::CheckInput()
 
 	Check::CheckStrParam("pay_channel", m_InParams["pay_channel"], 1, 20, true);  //对账银行
 
-
+	if(m_InParams["pay_channel"] == "GZPF" 
+		|| m_InParams["pay_channel"] == "SZCIB"
+		|| m_InParams["pay_channel"] == "ECITIC")
+	{
+		m_InParams["channel"] = "SWIFT";
+	}
+	else if(m_InParams["pay_channel"] == "FJHXBANK")
+	{
+		m_InParams["channel"] = "SPEEDPOS";
+	}
+	else
+	{
+		m_InParams["channel"] = m_InParams["pay_channel"];
+	}
 
 }
 
@@ -153,14 +166,31 @@ void CBillCheckTask::CheckBillTask()
 	SqlResultSet  OutMap;
 
 	sqlss.str("");
-	sqlss <<"select Fbill_date,Fpay_channel from "<<ROUTE_BILL_DB<<"."<<BILL_SUMMARY
+	sqlss <<"select Fbill_date,Fpay_channel,Fbill_result from "<<ROUTE_BILL_DB<<"."<<BILL_SUMMARY
 		  <<" where Fbill_date = '"<<m_InParams["bill_date"]<<"' and Fpay_channel = '"<<m_InParams["pay_channel"]
 		  <<"';";
 	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
 	if(iRet == 1)
 	{
-		CERROR_LOG("distribution record exist :[%s],[%s]!",OutMap["Fbill_date"].c_str(),OutMap["Fpay_channel"].c_str());
-		throw(CTrsExp(ERR_CHECK_BILL_EXIST,"当日已对账，不允许重复对账 !"));
+		if(OutMap["Fbill_result"] == "1")   //对账相符，不允许再生成
+		{
+			CERROR_LOG("CCreateRouteBill check bill success :[%s],[%s]!",OutMap["Fbill_date"].c_str(),OutMap["Fpay_channel"].c_str());
+			throw(CTrsExp(ERR_CHECK_BILL_EXIST,"当日已平账，不允许再重复对账 !"));
+		}
+		else   //删除汇总表数据
+		{
+			sqlss.str("");
+			sqlss <<" DELETE FROM "
+				  << ROUTE_BILL_DB<<"."<<BILL_SUMMARY
+				  <<" WHERE Fbill_date = '"<<m_InParams["bill_date"]<<"' and Fpay_channel = '"<<m_InParams["pay_channel"]<<"';";
+
+		    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+		    if(iRet != 1)
+		    {
+		    	CERROR_LOG("CheckBillRecord:delete t_route_bill_summary fail!!!");
+		    	throw(CTrsExp(UPDATE_DB_ERR,"CheckBillRecord:delete t_route_bill_summary fail!!!"));
+		    }
+		}
 	}
 	//检查当日系统对账单是否生成
 	sqlss.str("");
@@ -186,6 +216,7 @@ void CBillCheckTask::SendCreatBillRequest()
 	paramMap.insert(StringMap::value_type("cmd","9010"));
 	paramMap.insert(StringMap::value_type("ver","1.0"));
 	paramMap.insert(StringMap::value_type("bill_date",m_InParams["bill_date"]));
+	paramMap.insert(StringMap::value_type("pay_channel",m_InParams["pay_channel"]));
 
 	billSocket->SendAndRecvLineEx(paramMap,szRecvBuff,sizeof(szRecvBuff),"\r\n");
 	CDEBUG_LOG("recv Msg [%s]",szRecvBuff);
@@ -208,46 +239,177 @@ void CBillCheckTask::SendCreatBillRequest()
 void CBillCheckTask::LoadBillFiletoDB()
 {
 	CRouteBillBusiConf* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBusiConf();
-	string strbill_file_name = pBillBusConfig->BusiConfig.m_spdb_bill_path +
-			pBillBusConfig->BusiConfig.m_bill_file_prefix + "_" + m_InParams["bill_date"];
-	CDEBUG_LOG("bill file name = [%s]",strbill_file_name.c_str());
 
-	if(access(strbill_file_name.c_str(),F_OK) != 0)
+	//获取代理商ID
+	CallPayGate2GetFactorID();
+
+	TracateBankDB(m_InParams["channel"]);
+	
+	string load_tables;
+	if(m_InParams["channel"] == "SWIFT")
 	{
-		CERROR_LOG("bill file not exist !",strbill_file_name.c_str());
-		throw(CTrsExp(ERR_BILL_FILE_NOT_EXIST,"通道方对账文件不存在 !"));
+		load_tables = SWIFT_CHECK_BILL;
+	}
+	else if(m_InParams["channel"] == "SPEEDPOS")
+	{
+		load_tables = SPEEDPOS_CHENK_BILL;
+	}
+	else
+	{
+		load_tables = SZSPDB_CHECK_BILL;
 	}
 
-	//清空通道对账数据
-	TracateBankDB();
 
+	for(auto factor_iter : factor_vec)
+	{
+		string strbill_file_name = "";
+		char szLoadOrderFlowCmd[512] = { 0 };
+		
+		if(m_InParams["channel"] == "SPEEDPOS")
+		{
+			strbill_file_name = pBillBusConfig->BusiConfig.m_spdb_bill_path + factor_iter \
+				+ "_" + m_InParams["bill_date"] + ".csv";
+		}
+		else
+		{
+			strbill_file_name = pBillBusConfig->BusiConfig.m_spdb_bill_path + m_InParams["pay_channel"] + "_" +
+					factor_iter + "_" + m_InParams["bill_date"];
 
-	string strshell_name = pBillBusConfig->BusiConfig.m_filetodb_shell;
-	CDEBUG_LOG("shell name = [%s]",strshell_name.c_str());
+			//转换文件名称
+			string strnew_file_name = strbill_file_name + ".csv";
+			snprintf(szLoadOrderFlowCmd,sizeof(szLoadOrderFlowCmd),"cp %s %s",strbill_file_name.c_str(),strnew_file_name.c_str());
+			CDEBUG_LOG("cp command szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
+			system(szLoadOrderFlowCmd);
 
-	char szLoadOrderFlowCmd[512] = { 0 };
-	snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s %s %d %s %s %s %s %s",
-			strshell_name.c_str(), m_pBillDB->ms_host, m_pBillDB->mi_port,
-			m_pBillDB->ms_user, m_pBillDB->ms_pass, ROUTE_BILL_DB,strbill_file_name.c_str(),SZSPDB_CHECK_BILL);
-	CDEBUG_LOG("szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
-	system(szLoadOrderFlowCmd);
+			strbill_file_name = strnew_file_name;
+		}
+
+		CDEBUG_LOG("bill file name = [%s]",strbill_file_name.c_str());
+
+		if(access(strbill_file_name.c_str(),F_OK) != 0)
+		{
+			CERROR_LOG("bill file not exist !",strbill_file_name.c_str());
+			throw(CTrsExp(ERR_BILL_FILE_NOT_EXIST,"通道方对账文件不存在 !"));
+		}
+
+		if(tars::TC_File::getFileSize(strbill_file_name) == 0)
+		{
+			//无数据，则跳过这个文件
+			CDEBUG_LOG("bill file name  [%s] no data ,jump over!!",strbill_file_name.c_str());
+			continue;
+		}
+
+		string strshell_name = pBillBusConfig->BusiConfig.m_filetodb_shell;
+		CDEBUG_LOG("shell name = [%s]",strshell_name.c_str());
+
+		memset(szLoadOrderFlowCmd,0x00,sizeof(szLoadOrderFlowCmd));
+		snprintf(szLoadOrderFlowCmd, sizeof(szLoadOrderFlowCmd), "sh %s %s %d %s %s %s %s %s %s",
+				strshell_name.c_str(), m_pBillDB->ms_host, m_pBillDB->mi_port,
+				m_pBillDB->ms_user, m_pBillDB->ms_pass, ROUTE_BILL_DB,strbill_file_name.c_str(),load_tables.c_str(),m_InParams["channel"].c_str());
+		CDEBUG_LOG("sh command szLoadOrderFlowCmd = [%s]",szLoadOrderFlowCmd);
+		system(szLoadOrderFlowCmd);
+	}
 
 }
 
-void CBillCheckTask::TracateBankDB()
+void CBillCheckTask::CallPayGate2GetFactorID()
+{
+	char szRecvBuff[1024*10] = {0};
+	factor_vec.clear();
+	StringMap paramMap;
+	StringMap recvMap;
+	CSocket* paygateSocket = Singleton<CSpeedPosConfig>::GetInstance()->GetPaygateServerSocket();
+	//调用网关服务 ，获取代理商ID
+	paramMap.insert(StringMap::value_type("ver", "1"));
+	paramMap.insert(StringMap::value_type("cmd","5021"));
+	paramMap.insert(StringMap::value_type("version","1.0"));
+
+	JsonMap  bizCJsonMap;
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("dml_type"), "ALL"));
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("pay_channel_id"),m_InParams["pay_channel"]));
+	bizCJsonMap.insert(JsonMap::value_type(JsonType("group_by"),"Fchannel_factor_id"));
+	std::string bizContent = JsonUtil::objectToString(bizCJsonMap);
+	paramMap.insert(std::make_pair("biz_content", bizContent));
+
+	paygateSocket->SendAndRecvLineEx(paramMap,szRecvBuff,sizeof(szRecvBuff),"\r\n");
+	//CDEBUG_LOG("recv Msg [%s]",szRecvBuff);
+
+	if(NULL == szRecvBuff||strlen(szRecvBuff) == 0)  //
+	{
+		CDEBUG_LOG("get factor_id fail !!,err_msg[%s]",recvMap["retmsg"].c_str());
+		throw(CTrsExp(ERR_DOWNLOAD_BILL,"get factor_id fail!!"));
+	}
+
+	cJSON* root = cJSON_Parse(szRecvBuff);
+	if (0 != strcmp(cJSON_GetObjectItem(root, "ret_code")->valuestring, "0"))
+	{
+		CERROR_LOG("ret_code:[%s] ret_msg:[%s]\n", cJSON_GetObjectItem(root, "ret_code")->valuestring, cJSON_GetObjectItem(root, "ret_msg")->valuestring);
+		throw (CTrsExp(ERR_CALL_PAYGATE_SERV, cJSON_GetObjectItem(root, "ret_msg")->valuestring));
+	}
+
+	//嵌套Json
+	cJSON * biz_content = cJSON_GetObjectItem(root, "biz_content");
+	cJSON * factor_ids = cJSON_GetObjectItem(biz_content, "lists");
+	int iTotal = cJSON_GetArraySize(factor_ids);
+	CDEBUG_LOG("factor_id list [%d]",iTotal);
+	for (int i = 0; i < iTotal; ++i)
+	{
+		cJSON* channel = cJSON_GetArrayItem(factor_ids, i);
+		JsonType obj = JsonUtil::json2obj(channel);
+		JsonMap jMap = obj.toMap();
+
+		StringMap factorMap;
+		factorMap["factor_id"] = jMap["channel_factor_id"].toString();
+		factor_vec.push_back(factorMap["factor_id"]);
+	}
+
+	for(auto iter:factor_vec)
+	{
+		CDEBUG_LOG("factor_id = %s",iter.c_str());
+	}
+}
+
+void CBillCheckTask::TracateBankDB(const string& channel)
 {
 	int iRet = 0;
 
-	sqlss.str("");
-	sqlss <<"DELETE FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
-		  <<" WHERE Fbill_date = '"<<m_InParams["bill_date"]<<"';";
+	if(channel == "SWIFT")  //威富通
+	{
+		sqlss.str("");
+		sqlss <<"DELETE FROM "<<ROUTE_BILL_DB<<"."<<SWIFT_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
+	    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+	    if(iRet != 1)
+	    {
+	    	CERROR_LOG("delete  t_route_swiftpass_bill fail!!!");
+	    	throw(CTrsExp(UPDATE_DB_ERR,"delete t_route_swiftpass_bill fail!!!"));
+	    }
+	}
+	else if(channel == "SPEEDPOS")  //SPEEDPOS
+	{
+		sqlss.str("");
+		sqlss <<"DELETE FROM "<<ROUTE_BILL_DB<<"."<<SPEEDPOS_CHENK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
+	    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+	    if(iRet != 1)
+	    {
+	    	CERROR_LOG("delete  t_route_swiftpass_bill fail!!!");
+	    	throw(CTrsExp(UPDATE_DB_ERR,"delete t_route_swiftpass_bill fail!!!"));
+	    }
+	}	
+	else  //深圳浦发
+	{
+		sqlss.str("");
+		sqlss <<"DELETE FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
+			  <<" WHERE Fbill_date = '"<<m_InParams["bill_date"]<<"';";
+	    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
+	    if(iRet != 1)
+	    {
+	    	CERROR_LOG("delete  t_route_szspdb_bill fail!!!");
+	    	throw(CTrsExp(UPDATE_DB_ERR,"delete t_route_szspdb_bill fail!!!"));
+	    }
+	}
 
-    iRet = m_mysql.Execute(*m_pBillDB,sqlss.str().c_str());
-    if(iRet != 1)
-    {
-    	CERROR_LOG("delete  t_route_szspdb_bill fail!!!");
-    	throw(CTrsExp(UPDATE_DB_ERR,"delete t_route_szspdb_bill fail!!!"));
-    }
 }
 
 void CBillCheckTask::GetBillData()
@@ -309,46 +471,141 @@ void CBillCheckTask::GetBillData()
 	CDEBUG_LOG("order paybill num :[%d], order refundbill num:[%d]",orderPayBillMap.size(),orderRefundBillMap.size());
 
 	//查银行对账记录
-	resMVector.clear();
-	sqlss.str("");
-	sqlss <<"SELECT Fbill_date,Forder_no,Fpay_time,Fpay_amount,Fpay_fee,Fori_order_no"
-		  <<" FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
-		  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
-
-	iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
-	if(iRet == 1)  //有记录
+	if(m_InParams["channel"] == "SWIFT")
 	{
-		for(size_t i = 0; i < resMVector.size(); i++)
+		//TODO:
+		resMVector.clear();
+		sqlss.str("");
+		sqlss <<"SELECT Fpay_time,Ftrade_type,Fmch_order_no,Ftotal_amount*100 as Ftotal_amount,Ftotal_fee*100 as Ftotal_fee,Fout_order_no,Forder_status"
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SWIFT_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
+
+		iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
+		if(iRet == 1)  //有记录
 		{
-			if(resMVector[i]["Fori_order_no"].empty()) //先判断，如果退款单号为空，则是成功的交易
+			for(size_t i = 0; i < resMVector.size(); i++)
 			{
-				BankpayBillSummary bankpaybill;
-				bankpaybill.Reset();
-				bankpaybill.bill_date = resMVector[i]["Fbill_date"];
-				bankpaybill.order_no = resMVector[i]["Forder_no"];
-				bankpaybill.pay_time = resMVector[i]["Fpay_time"];
-				bankpaybill.pay_amount = resMVector[i]["Fpay_amount"];
-				bankpaybill.pay_fee = resMVector[i]["Fpay_fee"];
-				bankpaybill.ori_order_no = resMVector[i]["Fori_order_no"];
+				if(resMVector[i]["Forder_status"] == "转入退款")   //退货，退款交易
+				{
+					BankpayBillSummary bankrefundbill;
+					bankrefundbill.Reset();
+					bankrefundbill.bill_date = toDateEx(resMVector[i]["Fpay_time"]);
+					bankrefundbill.order_no = resMVector[i]["Fmch_order_no"];
+					bankrefundbill.pay_time = resMVector[i]["Fpay_time"];
+					bankrefundbill.pay_amount = resMVector[i]["Ftotal_amount"];
+					bankrefundbill.pay_fee = resMVector[i]["Ftotal_fee"];
+					bankrefundbill.ori_order_no = resMVector[i]["Fout_order_no"];
 
-				bankPayBillMap.insert(std::make_pair(bankpaybill.order_no, bankpaybill));
+					bankRefundBillMap.insert(std::make_pair(bankrefundbill.order_no, bankrefundbill));
+
+				}
+				else //否则就是正常交易
+				{
+					BankpayBillSummary bankpaybill;
+					bankpaybill.Reset();
+					bankpaybill.bill_date = toDateEx(resMVector[i]["Fpay_time"]);
+					bankpaybill.order_no = resMVector[i]["Fmch_order_no"];  //商户订单号，对应本地平台订单号
+					bankpaybill.pay_time = resMVector[i]["Fpay_time"];
+					bankpaybill.pay_amount = resMVector[i]["Ftotal_amount"];
+					bankpaybill.pay_fee = resMVector[i]["Ftotal_fee"];
+					bankpaybill.ori_order_no = resMVector[i]["Fout_order_no"];
+
+					bankPayBillMap.insert(std::make_pair(bankpaybill.order_no, bankpaybill));
+				}
+
 			}
-			else //否则是退款交易
-			{
-				BankpayBillSummary bankrefundbill;
-				bankrefundbill.Reset();
-				bankrefundbill.bill_date = resMVector[i]["Fbill_date"];
-				bankrefundbill.order_no = resMVector[i]["Forder_no"];
-				bankrefundbill.pay_time = resMVector[i]["Fpay_time"];
-				bankrefundbill.pay_amount = resMVector[i]["Fpay_amount"];
-				bankrefundbill.pay_fee = resMVector[i]["Fpay_fee"];
-				bankrefundbill.ori_order_no = resMVector[i]["Fori_order_no"];
-
-				bankRefundBillMap.insert(std::make_pair(bankrefundbill.order_no, bankrefundbill));
-			}
-
 		}
 	}
+	else if(m_InParams["channel"] == "SPEEDPOS")
+	{
+		//TODO:
+		resMVector.clear();
+		sqlss.str("");
+		sqlss <<"SELECT Fpay_time,Forder_no,Fout_order_no,Fmch_id,Ftrade_type,Forder_status,Fpayment_fee,Ffee,Frefund_fee,Frefund_no,Fout_refund_no"
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SPEEDPOS_CHENK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
+
+		iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
+		if(iRet == 1)  //有记录
+		{
+			for(size_t i = 0; i < resMVector.size(); i++)
+			{
+				if(STOI(resMVector[i]["Frefund_fee"]) > 0)   //退货，退款交易
+				{
+					BankpayBillSummary bankrefundbill;
+					bankrefundbill.Reset();
+					bankrefundbill.bill_date = toDateEx(resMVector[i]["Fpay_time"]);
+					bankrefundbill.order_no = resMVector[i]["Forder_no"];
+					bankrefundbill.pay_time = resMVector[i]["Fpay_time"];
+					bankrefundbill.pay_amount = resMVector[i]["Fpayment_fee"];
+					bankrefundbill.pay_fee = resMVector[i]["Ffee"];
+					bankrefundbill.ori_order_no = resMVector[i]["Fout_order_no"];
+
+					bankRefundBillMap.insert(std::make_pair(bankrefundbill.order_no, bankrefundbill));
+
+				}
+				else //否则就是正常交易
+				{
+					BankpayBillSummary bankpaybill;
+					bankpaybill.Reset();
+					bankpaybill.bill_date = toDateEx(resMVector[i]["Fpay_time"]);
+					bankpaybill.order_no = resMVector[i]["Forder_no"];
+					bankpaybill.pay_time = resMVector[i]["Fpay_time"];
+					bankpaybill.pay_amount = resMVector[i]["Fpayment_fee"];
+					bankpaybill.pay_fee = resMVector[i]["Ffee"];
+					bankpaybill.ori_order_no = resMVector[i]["Fout_order_no"];
+
+					bankPayBillMap.insert(std::make_pair(bankpaybill.order_no, bankpaybill));
+				}
+			}
+		}
+
+	}
+	else  //深浦发
+	{
+		resMVector.clear();
+		sqlss.str("");
+		sqlss <<"SELECT Fbill_date,Ftrade_type,Forder_no,Fpay_time,Fpay_amount,Fpay_fee,Fori_order_no"
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"';";
+
+		iRet = m_mysql.QryAndFetchResMVector(*m_pBillDB,sqlss.str().c_str(),resMVector);
+		if(iRet == 1)  //有记录
+		{
+			for(size_t i = 0; i < resMVector.size(); i++)
+			{
+				if(resMVector[i]["Ftrade_type"] == "02")   //退货，退款交易
+				{
+					BankpayBillSummary bankrefundbill;
+					bankrefundbill.Reset();
+					bankrefundbill.bill_date = resMVector[i]["Fbill_date"];
+					bankrefundbill.order_no = resMVector[i]["Forder_no"];
+					bankrefundbill.pay_time = resMVector[i]["Fpay_time"];
+					bankrefundbill.pay_amount = resMVector[i]["Fpay_amount"];
+					bankrefundbill.pay_fee = resMVector[i]["Fpay_fee"];
+					bankrefundbill.ori_order_no = resMVector[i]["Fori_order_no"];
+
+					bankRefundBillMap.insert(std::make_pair(bankrefundbill.order_no, bankrefundbill));
+
+				}
+				else //否则就是正常交易
+				{
+					BankpayBillSummary bankpaybill;
+					bankpaybill.Reset();
+					bankpaybill.bill_date = resMVector[i]["Fbill_date"];
+					bankpaybill.order_no = resMVector[i]["Forder_no"];
+					bankpaybill.pay_time = resMVector[i]["Fpay_time"];
+					bankpaybill.pay_amount = resMVector[i]["Fpay_amount"];
+					bankpaybill.pay_fee = resMVector[i]["Fpay_fee"];
+					bankpaybill.ori_order_no = resMVector[i]["Fori_order_no"];
+
+					bankPayBillMap.insert(std::make_pair(bankpaybill.order_no, bankpaybill));
+				}
+
+			}
+		}
+	}
+
 	CDEBUG_LOG("bank paybill num :[%d], bank refundbill num:[%d]",bankPayBillMap.size(),bankRefundBillMap.size());
 
 }
@@ -515,7 +772,7 @@ void CBillCheckTask::UpdateCheckBillDB(const string& order_no)
 INT32 CBillCheckTask::BankOverflowQuery(string& order_no,int order_flag)
 {
 	//int iRet = 0;
-	char szRecvBuff[1024] = {0};
+	char szRecvBuff[10240] = {0};
 	StringMap paramMap;
 	StringMap recvMap;
 	CSocket* tradeSocket = Singleton<CSpeedPosConfig>::GetInstance()->GetTradeServerSocket();
@@ -543,7 +800,7 @@ INT32 CBillCheckTask::BankOverflowQuery(string& order_no,int order_flag)
 
 
 	tradeSocket->SendAndRecvLineEx(paramMap,szRecvBuff,sizeof(szRecvBuff),"\r\n");
-	CDEBUG_LOG("recv Msg [%s]",szRecvBuff);
+	CDEBUG_LOG("recv Msg 111111111[%s]",szRecvBuff);
 
 	if(NULL == szRecvBuff||strlen(szRecvBuff) == 0)  //
 	{
@@ -552,16 +809,24 @@ INT32 CBillCheckTask::BankOverflowQuery(string& order_no,int order_flag)
 	}
 
 	cJSON* root = cJSON_Parse(szRecvBuff);
-	if (0 != strcmp(cJSON_GetObjectItem(root, "ret_code")->valuestring, "0"))
+	if (0 == strcmp(cJSON_GetObjectItem(root, "ret_code")->valuestring, "DD200210"))
 	{
 		CERROR_LOG("ret_code:[%s] ret_msg:[%s]\n", cJSON_GetObjectItem(root, "ret_code")->valuestring, cJSON_GetObjectItem(root, "ret_msg")->valuestring);
 		return -1;
 	}
+	else if(0 == strcmp(cJSON_GetObjectItem(root, "ret_code")->valuestring, "0"))
+	{
+		return 0;
+	}
+	else
+	{
+		CERROR_LOG("query order server error :ret_code:[%s] ret_msg:[%s]\n", cJSON_GetObjectItem(root, "ret_code")->valuestring, cJSON_GetObjectItem(root, "ret_msg")->valuestring);
+		throw(CTrsExp(ERR_CALL_ORDER_SERV,"查询订单服务失败！"));
+	}
 
+	//CDEBUG_LOG("CallPayGate2DownCheckBill,retcode=[%s]",recvMap["retcode"].c_str());
 
-	CDEBUG_LOG("CallPayGate2DownCheckBill,retcode=[%s]",recvMap["retcode"].c_str());
-
-	return 0;
+	//return -2;
 
 }
 
@@ -587,7 +852,9 @@ void CBillCheckTask::InsertIntoSummary()
 	sqlss.str("");
 	sqlss <<"SELECT Fpay_channel,count(*) as pf_total_count ,sum(Ftotal_amount) as pf_total_amt, sum(Ffactor_rate_val) as factor_fee,"
 		  <<"sum(Fmch_rate_val) as mch_fee,sum(Fproduct_rate_val) as product_fee,sum(Fplatform_rate_val) as serv_rate_val from "<<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
-		  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Forder_status = '"<<ORDER_SUCCESS<<"';";
+		  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Fpay_channel_id = '"<<m_InParams["pay_channel"]
+		  <<"' and Forder_status = '"<<ORDER_SUCCESS<<"';";
+
 
 	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
 	SummaryMap["channel_name"] = OutMap["Fpay_channel"].empty() ? "":OutMap["Fpay_channel"];
@@ -601,14 +868,15 @@ void CBillCheckTask::InsertIntoSummary()
 	//total_fee = atol(SummaryMap["factor_fee"].c_str()) + atol(SummaryMap["mch_fee"].c_str()) + atol(SummaryMap["product_fee"].c_str());
 	total_fee = atol(SummaryMap["mch_fee"].c_str());
 
-	CDEBUG_LOG("pf_total_count = [%s],total_amount = [%s],total_fee = [%ld]",SummaryMap["pf_total_count"].c_str(),SummaryMap["pf_total_amt"].c_str(),total_fee);
+	CDEBUG_LOG("------>pf_total_count = [%s],total_amount = [%s],total_fee = [%ld]",SummaryMap["pf_total_count"].c_str(),SummaryMap["pf_total_amt"].c_str(),total_fee);
 
 	//本地退款
 	sqlss.str("");
 	OutMap.clear();
 	sqlss <<"SELECT count(*) as pf_refund_count ,sum(Frefund_amount) as pf_refund_amt, sum(Ffactor_rate_val) as factor_fee,"
 		  <<"sum(Fmch_rate_val) as mch_fee,sum(Fproduct_rate_val) as product_fee,sum(Fplatform_rate_val) as serv_rate_val from "<<ROUTE_BILL_DB<<"."<<T_ROUTE_BILL
-		  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Forder_status = '"<<ORDER_REFUND<<"';";
+		  <<" where Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Fpay_channel_id = '"<<m_InParams["pay_channel"]
+		  <<"' and Forder_status = '"<<ORDER_REFUND<<"';";
 
 	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
 	SummaryMap["pf_refund_count"] = OutMap["pf_refund_count"].empty() ? "0":OutMap["pf_refund_count"];
@@ -621,31 +889,99 @@ void CBillCheckTask::InsertIntoSummary()
 	//refund_fee = atol(SummaryMap["factor_fee"].c_str()) + atol(SummaryMap["mch_fee"].c_str()) + atol(SummaryMap["product_fee"].c_str());
 	refund_fee = atol(SummaryMap["mch_fee"].c_str());
 
-	CDEBUG_LOG("pf_refund_count = [%s],pf_refund_amount = [%s],total_fee = [%ld]",SummaryMap["pf_refund_count"].c_str(),SummaryMap["pf_refund_amt"].c_str(),refund_fee);
+	CDEBUG_LOG("----->pf_refund_count = [%s],pf_refund_amount = [%s],total_fee = [%ld]",SummaryMap["pf_refund_count"].c_str(),SummaryMap["pf_refund_amt"].c_str(),refund_fee);
 
-	//银行成功
-	sqlss.str("");
-	OutMap.clear();
-	sqlss <<"SELECT count(*) as ch_total_count,sum(Fpay_amount) as ch_total_amt, sum(Fpay_fee) as ch_total_fee "
-		  <<" FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
-		  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Fori_order_no = '';";
 
-	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
-	SummaryMap["ch_total_count"] = OutMap["ch_total_count"].empty() ?"0":OutMap["ch_total_count"];
-	SummaryMap["ch_total_amt"] = OutMap["ch_total_amt"].empty() ?"0":OutMap["ch_total_amt"];
-	SummaryMap["ch_total_fee"] = OutMap["ch_total_fee"].empty() ?"0":OutMap["ch_total_fee"];
+	if(m_InParams["channel"] == "SWIFT")
+	{
+		//TODO:
+		//银行成功
+		sqlss.str("");
+		OutMap.clear();
+		sqlss <<"SELECT count(*) as ch_total_count,sum(Ftotal_amount*100) as ch_total_amt, sum(Ftotal_fee*100) as ch_total_fee "
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SWIFT_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Forder_status = '支付成功';";
 
-	//银行退款
-	sqlss.str("");
-	OutMap.clear();
-	sqlss <<"SELECT count(*) as ch_refund_count,sum(Fpay_amount) as ch_refund_amt, sum(Fpay_fee) as ch_refund_fee "
-		  <<" FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
-		  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Fori_order_no != '';";
+		iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
+		SummaryMap["ch_total_count"] = OutMap["ch_total_count"].empty() ?"0":OutMap["ch_total_count"];
+		SummaryMap["ch_total_amt"] = OutMap["ch_total_amt"].empty() ?"0":OutMap["ch_total_amt"];
+		SummaryMap["ch_total_fee"] = OutMap["ch_total_fee"].empty() ?"0":OutMap["ch_total_fee"];
 
-	iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
-	SummaryMap["ch_refund_count"] = OutMap["ch_refund_count"].empty() ?"0":OutMap["ch_refund_count"];
-	SummaryMap["ch_refund_amt"] = OutMap["ch_refund_amt"].empty() ?"0":OutMap["ch_refund_amt"];
-	SummaryMap["ch_refund_fee"] = OutMap["ch_refund_fee"].empty() ?"0":OutMap["ch_refund_fee"];
+		CDEBUG_LOG("------>bank total_count = [%s],total_amt = [%s]",SummaryMap["ch_total_count"].c_str(),SummaryMap["ch_total_amt"].c_str());
+
+		//银行退款
+		sqlss.str("");
+		OutMap.clear();
+		sqlss <<"SELECT count(*) as ch_refund_count,sum(Frefund_amount*100) as ch_refund_amt, sum(Ftotal_fee*100) as ch_refund_fee "
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SWIFT_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Forder_status = '转入退款';";
+
+		iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
+		SummaryMap["ch_refund_count"] = OutMap["ch_refund_count"].empty() ?"0":OutMap["ch_refund_count"];
+		SummaryMap["ch_refund_amt"] = OutMap["ch_refund_amt"].empty() ?"0":ITOS(abs(atoi(OutMap["ch_refund_amt"].c_str())));
+		SummaryMap["ch_refund_fee"] = OutMap["ch_refund_fee"].empty() ?"0":OutMap["ch_refund_fee"];
+	}
+	else if(m_InParams["channel"] == "SPEEDPOS")
+	{
+		//TODO:
+		//银行成功
+		sqlss.str("");
+		OutMap.clear();
+		sqlss <<"SELECT count(*) as ch_total_count,sum(Fpayment_fee) as ch_total_amt, sum(Ffee) as ch_total_fee "
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SPEEDPOS_CHENK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Forder_status = 'SUCCESS';";
+
+		iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
+		SummaryMap["ch_total_count"] = OutMap["ch_total_count"].empty() ?"0":OutMap["ch_total_count"];
+		SummaryMap["ch_total_amt"] = OutMap["ch_total_amt"].empty() ?"0":OutMap["ch_total_amt"];
+		SummaryMap["ch_total_fee"] = OutMap["ch_total_fee"].empty() ?"0":OutMap["ch_total_fee"];
+
+		CDEBUG_LOG("------>bank total_count = [%s],total_amt = [%s]",SummaryMap["ch_total_count"].c_str(),SummaryMap["ch_total_amt"].c_str());
+
+		//银行退款
+		sqlss.str("");
+		OutMap.clear();
+		sqlss <<"SELECT count(*) as ch_refund_count,sum(Frefund_fee) as ch_refund_amt, sum(Ffee) as ch_refund_fee "
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SPEEDPOS_CHENK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Frefund_fee > 0;";
+
+		iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
+		SummaryMap["ch_refund_count"] = OutMap["ch_refund_count"].empty() ?"0":OutMap["ch_refund_count"];
+		SummaryMap["ch_refund_amt"] = OutMap["ch_refund_amt"].empty() ?"0":ITOS(abs(atoi(OutMap["ch_refund_amt"].c_str())));
+		SummaryMap["ch_refund_fee"] = OutMap["ch_refund_fee"].empty() ?"0":OutMap["ch_refund_fee"];
+
+	}
+	else
+	{
+		//银行成功
+		sqlss.str("");
+		OutMap.clear();
+		sqlss <<"SELECT count(*) as ch_total_count,sum(Fpay_amount) as ch_total_amt, sum(Fpay_fee) as ch_total_fee "
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Ftrade_type != '02';";  //交易类型
+
+		iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
+		SummaryMap["ch_total_count"] = OutMap["ch_total_count"].empty() ?"0":OutMap["ch_total_count"];
+		SummaryMap["ch_total_amt"] = OutMap["ch_total_amt"].empty() ?"0":OutMap["ch_total_amt"];
+		SummaryMap["ch_total_fee"] = OutMap["ch_total_fee"].empty() ?"0":OutMap["ch_total_fee"];
+
+		CDEBUG_LOG("------>bank total_count = [%s],total_amt = [%s]",SummaryMap["ch_total_count"].c_str(),SummaryMap["ch_total_amt"].c_str());
+
+		//银行退款
+		sqlss.str("");
+		OutMap.clear();
+		sqlss <<"SELECT count(*) as ch_refund_count,sum(Fpay_amount) as ch_refund_amt, sum(Fpay_fee) as ch_refund_fee "
+			  <<" FROM "<<ROUTE_BILL_DB<<"."<<SZSPDB_CHECK_BILL
+			  <<" WHERE Fpay_time >='"<<m_start_time<<"' AND Fpay_time <='"<<m_end_time<<"' and Ftrade_type = '02';";
+
+		iRet = m_mysql.QryAndFetchResMap(*m_pBillDB,sqlss.str().c_str(),OutMap);
+		SummaryMap["ch_refund_count"] = OutMap["ch_refund_count"].empty() ?"0":OutMap["ch_refund_count"];
+		SummaryMap["ch_refund_amt"] = OutMap["ch_refund_amt"].empty() ?"0":OutMap["ch_refund_amt"];
+		SummaryMap["ch_refund_fee"] = OutMap["ch_refund_fee"].empty() ?"0":OutMap["ch_refund_fee"];
+	}
+
+
+	CDEBUG_LOG("------->bank refund_count = [%s],refund_amt =[%s]",SummaryMap["ch_refund_count"].c_str(),SummaryMap["ch_refund_amt"].c_str());
 
 	sqlss.str("");
 	sqlss <<"INSERT INTO "<<ROUTE_BILL_DB<<"."<<BILL_SUMMARY
