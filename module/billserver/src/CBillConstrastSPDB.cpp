@@ -68,8 +68,23 @@ void CBillContrastSPDB::InitBillFileDownLoad(ProPullBillReq& m_stReq,int startti
 
 void CBillContrastSPDB::BillFileDownLoad(ProPullBillReq& m_stReq,int starttime)
 {
-
-	SFTPDownLoad(m_stReq,starttime);
+	const CBillBusiConfig::BankAttr* p_bank_attr = pBillBusConfig->GetBankAttrCfg(m_stReq.sBmId);
+	try
+	{
+		if(p_bank_attr->strUseSftp == "0")
+		{
+			Copy2GetFile(m_stReq,starttime);
+		}
+		else
+		{
+			SFTPDownLoad(m_stReq,starttime);
+		}
+	}
+	catch(tars::TC_File_Exception& e)
+	{
+		CERROR_LOG("use sftp/copy to get bill file  fail!!!");
+		throw(CTrsExp(ERR_DOWNLOAD_FILE,errMap[ERR_DOWNLOAD_FILE]));
+	}
 
    //wx
 	if(m_stReq.sPayChannel == WX_API_PAY_CHANNEL)
@@ -307,6 +322,16 @@ void CBillContrastSPDB::ProcBillComparison(ProPullBillReq& m_stReq,int starttime
 			CERROR_LOG("InsertRefundIdenticalWxToDB failed! Ret[%d] Err[%s].\n",iRet, m_stTransFlowDao.GetErrorMessage());
 			throw CTrsExp(iRet,m_stTransFlowDao.GetErrorMessage());
 		}
+
+		//本地和微信都有，但金额不符
+		iRet = m_stTransFlowDao.InsertAmountNotMatchToDB(*pBillDb,m_stReq.sBmId,m_stReq.sPayChannel,
+							nowdate(m_stReq.sInputTime),m_batch_no,sBeginTime,sEndTime);
+		if(iRet < 0)
+		{
+			CERROR_LOG("InsertAmountNotMatchToDB failed! Ret[%d] Err[%s].\n",iRet, m_stTransFlowDao.GetErrorMessage());
+			throw CTrsExp(iRet,m_stTransFlowDao.GetErrorMessage());
+		}
+
 		//微信方 成功的多
 		iRet = m_stTransFlowDao.InsertPayDistinctWxToDB(*pBillDb,m_stReq.sBmId,sBeginTime,sEndTime);
 		if (iRet < 0)
@@ -365,6 +390,7 @@ void CBillContrastSPDB::ProcBillComparison(ProPullBillReq& m_stReq,int starttime
 					CDEBUG_LOG("Wxpay OverFlow order_no:[%s]\n", wxOverFlowVec[iIndex].order_no.c_str());
 
 					//paramMap.insert(StringMap::value_type("ver", "1"));
+					paramMap.insert(StringMap::value_type("sync_flag", "1"));   //同步更新
 					paramMap.insert(StringMap::value_type("order_no", wxOverFlowVec[iIndex].order_no));
 					paramMap.insert(StringMap::value_type("order_status", wxOverFlowVec[iIndex].order_status));
 					if(wxOverFlowVec[iIndex].order_status == "REFUND")
@@ -381,7 +407,7 @@ void CBillContrastSPDB::ProcBillComparison(ProPullBillReq& m_stReq,int starttime
 						throw CTrsExp(ERR_PASE_RETRUN_DATA,"Query TradeService no response!");
 					}
 
-					ProcOverFlowData(strBody,ORDER_WX_CHAN_FLOW);
+					ProcOverFlowData(strBody,ORDER_WX_CHAN_FLOW,m_stReq);
 
 				}
 
@@ -406,6 +432,14 @@ void CBillContrastSPDB::ProcBillComparison(ProPullBillReq& m_stReq,int starttime
 		if (iRet < 0)
 		{
 			CERROR_LOG("InsertAliPayIdenticalRefundToDB failed! Ret[%d] Err[%s].\n",iRet, m_stTransFlowDao.GetErrorMessage());
+			throw CTrsExp(iRet,m_stTransFlowDao.GetErrorMessage());
+		}
+		//本地和支付宝都有，但金额不符
+		iRet = m_stTransFlowDao.InsertAmountNotMatchToDB(*pBillDb,m_stReq.sBmId,m_stReq.sPayChannel,
+							nowdate(m_stReq.sInputTime),m_batch_no,sBeginTime,sEndTime);
+		if(iRet < 0)
+		{
+			CERROR_LOG("InsertAmountNotMatchToDB failed! Ret[%d] Err[%s].\n",iRet, m_stTransFlowDao.GetErrorMessage());
 			throw CTrsExp(iRet,m_stTransFlowDao.GetErrorMessage());
 		}
 		//支付宝成功的多
@@ -464,7 +498,7 @@ void CBillContrastSPDB::ProcBillComparison(ProPullBillReq& m_stReq,int starttime
 					StringMap paramMap;
 					std::string strBody;
 					CDEBUG_LOG("Wxpay OverFlow order_no:[%s]\n", aliOverFlowVec[iIndex].order_no.c_str());
-
+					paramMap.insert(StringMap::value_type("sync_flag", "1"));   //同步更新
 					paramMap.insert(StringMap::value_type("order_no", aliOverFlowVec[iIndex].order_no));
 					paramMap.insert(StringMap::value_type("order_status", aliOverFlowVec[iIndex].order_status));
 					paramMap.insert(StringMap::value_type("refund_no", aliOverFlowVec[iIndex].refund_no));
@@ -476,7 +510,7 @@ void CBillContrastSPDB::ProcBillComparison(ProPullBillReq& m_stReq,int starttime
 						throw CTrsExp(ERR_PASE_RETRUN_DATA,"Query TradeService no response!");
 					}
 
-					ProcOverFlowData(strBody,ORDER_ALI_CHAN_FLOW);
+					ProcOverFlowData(strBody,ORDER_ALI_CHAN_FLOW,m_stReq);
 				}
 
 			}
@@ -571,195 +605,279 @@ void CBillContrastSPDB::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 	BEGIN_LOG(__func__);
 	CDEBUG_LOG("ProRemitBillProcess begin");
 	INT32 iRet = 0;
-	int iIndex = 1;
+	//int iIndex = 1;
 	int total_bm_profit = 0;
 	int total_service_profit = 0;
-	int total_amount = 0;
+	//int total_amount = 0;
+	CMySQL m_mysql;
 	/** 计算开始时间  结束时间**/
 	std::string strPayTime = getSysDate(starttime);
 
 	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
 	OrderStat orderStat;
+	orderStat.Reset();
+	string channel_code = GetPayChannelCode(m_Req);
 
-	CDEBUG_LOG("order trade bill num:[%d],refund bill num:[%d]",orderPayBillMap.size(),orderRefundBillMap.size());
-	std::map<std::string, OrderRefundBillSumary>::iterator itRefund;
-	for (std::map<std::string, OrderPayBillSumary>::iterator iter = orderPayBillMap.begin();
-		iter != orderPayBillMap.end(); ++iter)
-	//for(auto iter : orderPayBillMap)
+	try
 	{
-		orderStat.Reset();
-		std::string mch_id = iter->first;
-		orderStat.mch_id = mch_id;
-		orderStat.trade_count = iter->second.trade_count;
-		orderStat.trade_amount = iter->second.total_fee;
-		orderStat.trade_net_amount = iter->second.total_fee;
-		orderStat.total_net_commission = iter->second.total_commission;
-		orderStat.shop_net_amount = iter->second.shop_amount;
-		orderStat.payment_net_profit = iter->second.payment_profit;
-		orderStat.channel_net_profit = iter->second.channel_profit;
-		orderStat.service_net_profit = iter->second.service_profit;
-		orderStat.bm_net_profit = iter->second.bm_profit;
-		if ((itRefund = orderRefundBillMap.find(mch_id)) != orderRefundBillMap.end())
+		//开始事务
+		m_mysql.Begin(*pBillDb);
+
+		//清分商户
+		CDEBUG_LOG("order trade bill num:[%d],refund bill num:[%d]",orderPayBillMap.size(),orderRefundBillMap.size());
+		std::map<std::string, OrderRefundBillSumary>::iterator itRefund;
+		for (std::map<std::string, OrderPayBillSumary>::iterator iter = orderPayBillMap.begin();
+			iter != orderPayBillMap.end(); ++iter)
+		//for(auto iter : orderPayBillMap)
 		{
-			orderStat.refund_count = itRefund->second.refund_count;
-			orderStat.refund_amount = itRefund->second.refund_fee;
-			orderStat.trade_net_amount -= itRefund->second.refund_fee;
-			orderStat.total_net_commission -= itRefund->second.total_commission;
-			orderStat.shop_net_amount -= itRefund->second.shop_amount;
-			orderStat.payment_net_profit -= itRefund->second.payment_profit;
-			orderStat.channel_net_profit -= itRefund->second.channel_profit;
-			orderStat.service_net_profit -= itRefund->second.service_profit;
-			orderStat.bm_net_profit -= itRefund->second.bm_profit;
-		}
-		//orderStat.trade_count  交易笔数
-		//orderStat.trade_amount 交易金额
-		//orderStat.trade_net_amount  交易净额
-		//orderStat.shop_net_amount 待结算金额
-		//orderStat.refund_count  退款笔数
-		//orderStat.refund_amount 退款金额
-		//商户手续费
-		//写清分表
-		iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
-								m_batch_no,m_Req.sPayChannel,orderStat,SHOP_TYPE_NAME);
-		if (iRet < 0)
-		{
-			CERROR_LOG("InsertDistributionDB mch failed!iRet =[%d]", iRet);
-			throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB  mch failed!"));
-		}
+			orderStat.Reset();
+			std::string mch_id = iter->first;
+			orderStat.mch_id = mch_id;
+			orderStat.trade_count = iter->second.trade_count;
+			orderStat.trade_amount = iter->second.total_fee;
+			orderStat.trade_net_amount = iter->second.total_fee;
+			orderStat.total_net_commission = iter->second.total_commission;
+			orderStat.shop_net_amount = iter->second.shop_amount;
+			orderStat.payment_net_profit = iter->second.payment_profit;
+			orderStat.channel_net_profit = iter->second.channel_profit;
+			orderStat.service_net_profit = iter->second.service_profit;
+			orderStat.bm_net_profit = iter->second.bm_profit;
+			if ((itRefund = orderRefundBillMap.find(mch_id)) != orderRefundBillMap.end())
+			{
+				orderStat.refund_count = itRefund->second.refund_count;
+				orderStat.refund_amount = itRefund->second.refund_fee;
+				orderStat.trade_net_amount -= itRefund->second.refund_fee;
+				orderStat.total_net_commission -= itRefund->second.total_commission;
+				orderStat.shop_net_amount -= itRefund->second.shop_amount;
+				orderStat.payment_net_profit -= itRefund->second.payment_profit;  //成本手续费
+				orderStat.channel_net_profit -= itRefund->second.channel_profit;
+				orderStat.service_net_profit -= itRefund->second.service_profit;
+				orderStat.bm_net_profit -= itRefund->second.bm_profit;
+			}
+			//orderStat.trade_count  交易笔数
+			//orderStat.trade_amount 交易金额
+			//orderStat.trade_net_amount  交易净额
+			//orderStat.shop_net_amount 待结算金额
+			//orderStat.refund_count  退款笔数
+			//orderStat.refund_amount 退款金额
 
 
-		total_bm_profit += orderStat.bm_net_profit;
-		total_service_profit += orderStat.service_net_profit;
-		CDEBUG_LOG("OrderStat: mch_id[%s] trade_count[%d] trade_amount[%d] refund_count[%d] refund_amount[%d] trade_net_amount[%d]"
-			" total_net_commission[%d] shop_net_amount[%d] payment_net_profit[%d] channel_net_profit[%d] service_net_profit[%d] bm_net_profit[%d] \n",
-			orderStat.mch_id.c_str(), orderStat.trade_count, orderStat.trade_amount, orderStat.refund_count, orderStat.refund_amount,
-			orderStat.trade_net_amount, orderStat.total_net_commission, orderStat.shop_net_amount, orderStat.payment_net_profit,
-			orderStat.channel_net_profit, orderStat.service_net_profit, orderStat.bm_net_profit);
-		if (0 < orderStat.shop_net_amount)
-		{
+			total_bm_profit += orderStat.bm_net_profit;
+			total_service_profit += orderStat.service_net_profit;
+			CDEBUG_LOG("OrderStat: mch_id[%s] trade_count[%d] trade_amount[%d] refund_count[%d] refund_amount[%d] trade_net_amount[%d]"
+				" total_net_commission[%d] shop_net_amount[%d] payment_net_profit[%d] channel_net_profit[%d] service_net_profit[%d] bm_net_profit[%d] \n",
+				orderStat.mch_id.c_str(), orderStat.trade_count, orderStat.trade_amount, orderStat.refund_count, orderStat.refund_amount,
+				orderStat.trade_net_amount, orderStat.total_net_commission, orderStat.shop_net_amount, orderStat.payment_net_profit,
+				orderStat.channel_net_profit, orderStat.service_net_profit, orderStat.bm_net_profit);
+
 			TRemitBill remitBill;
 			remitBill.Reset();
 			remitBill.account_id = orderStat.mch_id;
 			remitBill.sType = SHOP_TYPE_NAME;
 			remitBill.remit_fee = orderStat.shop_net_amount;
-			remitBill.fremit_fee = (float)orderStat.shop_net_amount / (float)100;
+			remitBill.sRemitfee = F2Y(toString(orderStat.shop_net_amount));
 			remitBill.sPayTime = toDate(strPayTime);
 			remitBill.sRemitTime = toDate(getSysDate());
 			remitBill.sRemark = SHOP_REMARK_NAME;
 
-			AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
-		}
-	}
+			iRet = g_cOrderServer.CallGetBankNoApi(remitBill);
+			if (iRet < 0)
+			{
+				CERROR_LOG("CallGetBankNoApi failed! iRet[%d].\n",iRet);
+				throw(CTrsExp(ERR_NOTIFY_SETTLE_FAILED,"CallGetBankNoApi failed!"));
+			}
+			iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+									m_batch_no,m_Req.sPayChannel,channel_code,orderStat,remitBill,SHOP_TYPE_NAME);
+			if (iRet < 0)
+			{
+				CERROR_LOG("InsertDistributionDB mch failed!iRet =[%d]", iRet);
+				throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB  mch failed!"));
+			}
 
+			if (0 < orderStat.shop_net_amount)
+			{
 
-	CDEBUG_LOG("bill channel trade num:[%d],refund num:[%d]",channelPayMap.size(),channelRefundMap.size());
-	std::map<std::string, OrderChannelFlowData>::iterator it_refund;
-	for (std::map<std::string, OrderChannelFlowData>::iterator iterCl = channelPayMap.begin(); iterCl != channelPayMap.end(); ++iterCl)
-	{
-		std::string channel_id = iterCl->first;
-		int channel_profit = iterCl->second.channel_profit;
-		CDEBUG_LOG("pay channel_id:[%s] channel_profit[%d]\n", channel_id.c_str(), channel_profit);
-		if ((it_refund = channelRefundMap.find(channel_id)) != channelRefundMap.end())
-		{
-			CDEBUG_LOG("refund channel_id:[%s] channel_profit[%d]\n", channel_id.c_str(), it_refund->second.channel_profit);
-			channel_profit -= it_refund->second.channel_profit;
-		}
+				//写结算表
+				iRet = m_stTransFlowDao.InsertSettleDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+											m_batch_no,m_Req.sPayChannel,remitBill);
+				if (iRet < 0)
+				{
+					CERROR_LOG("InsertSettleDB failed! iRet[%d].\n",iRet);
+					throw(CTrsExp(ERR_DB_UPDATE,"InsertSettleDB failed!"));
+				}
 
-		orderStat.Reset();
-		orderStat.mch_id = channel_id;
-		orderStat.trade_count = iterCl->second.total_count;
-		orderStat.trade_amount = iterCl->second.total_fee;
-		orderStat.refund_amount = iterCl->second.refund_fee;
-		orderStat.trade_net_amount = orderStat.trade_count - orderStat.refund_amount;
-		orderStat.shop_net_amount = channel_profit;
-		orderStat.shared_profit = channel_profit;
-
-		//sum(total_fee)  交易金额
-		//count(*) 交易笔数
-		//sum(total_fee) - sum(refund_fee) 交易净额
-		//channel_profit  sum(channel_profit) - 分润金额
-		iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
-								m_batch_no,m_Req.sPayChannel,orderStat,CHANNEL_TYPE_NAME);
-		if (iRet < 0)
-		{
-			CERROR_LOG("InsertDistributionDB channel failed!iRet =[%d]", iRet);
-			throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB channel failed!"));
+				//AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
+			}
 		}
 
-
-		if (channel_profit > 0)
+		//清分渠道
+		CDEBUG_LOG("bill channel trade num:[%d],refund num:[%d]",channelPayMap.size(),channelRefundMap.size());
+		std::map<std::string, OrderChannelFlowData>::iterator it_refund;
+		for (std::map<std::string, OrderChannelFlowData>::iterator iterCl = channelPayMap.begin(); iterCl != channelPayMap.end(); ++iterCl)
 		{
+			orderStat.Reset();
+			std::string channel_id = iterCl->first;
+			int channel_profit = iterCl->second.channel_profit;
+			CDEBUG_LOG("pay channel_id:[%s] channel_profit[%d]\n", channel_id.c_str(), channel_profit);
+			if ((it_refund = channelRefundMap.find(channel_id)) != channelRefundMap.end())
+			{
+				channel_profit -= it_refund->second.channel_profit;
+				orderStat.refund_count = it_refund->second.total_count;
+				orderStat.refund_amount = it_refund->second.refund_fee;
+				CDEBUG_LOG("refund :channel_id=[%s], channel_profit=[%d],refund_count=[%d],refund_amount=[%d]\n",
+						channel_id.c_str(), it_refund->second.channel_profit,orderStat.refund_count,orderStat.refund_amount);
+			}
+
+
+//			CDEBUG_LOG("out :refund_count=[%d],refund_amount=[%d]\n",
+//					orderStat.refund_count,orderStat.refund_amount);
+
+			orderStat.mch_id = channel_id;
+			orderStat.trade_count = iterCl->second.total_count;
+			orderStat.trade_amount = iterCl->second.total_fee;
+			orderStat.trade_net_amount = orderStat.trade_amount - orderStat.refund_amount;
+			orderStat.shop_net_amount = channel_profit;
+			orderStat.shared_profit = channel_profit;
+
+//			CDEBUG_LOG("out2 :orderStat.trade_amount=[%d],trade_net_amount=[%d],shop_net_amount=[%d]\n",
+//								orderStat.trade_amount,orderStat.trade_net_amount,orderStat.shop_net_amount);
+
+			//sum(total_fee)  交易金额
+			//count(*) 交易笔数
+			//sum(total_fee) - sum(refund_fee) 交易净额
+			//channel_profit  sum(channel_profit) - 分润金额
 			TRemitBill remitBill;
 			remitBill.Reset();
 			remitBill.account_id = channel_id;
 			remitBill.sType = CHANNEL_TYPE_NAME;
-			remitBill.fremit_fee = (float)channel_profit / (float)100;
+			remitBill.sRemitfee = F2Y(toString(channel_profit));
 			remitBill.remit_fee = channel_profit;
 			remitBill.sPayTime = toDate(strPayTime);
 			remitBill.sRemitTime = toDate(getSysDate());
 			remitBill.sRemark = CHANNEL_REMARK_NAME;
 
-			AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
+			iRet = g_cOrderServer.CallGetBankNoApi(remitBill);
+			if (iRet < 0)
+			{
+				CERROR_LOG("CallGetBankNoApi failed! iRet[%d].\n",iRet);
+				throw(CTrsExp(ERR_NOTIFY_SETTLE_FAILED,"CallGetBankNoApi failed!"));
+			}
+
+			iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+									m_batch_no,m_Req.sPayChannel,channel_code,orderStat,remitBill,CHANNEL_TYPE_NAME);
+			if (iRet < 0)
+			{
+				CERROR_LOG("InsertDistributionDB channel failed!iRet =[%d]", iRet);
+				throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB channel failed!"));
+			}
+
+
+			if (channel_profit > 0)
+			{
+				//写结算表
+				iRet = m_stTransFlowDao.InsertSettleDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+											m_batch_no,m_Req.sPayChannel,remitBill);
+				if (iRet < 0)
+				{
+					CERROR_LOG("InsertSettleDB failed! iRet[%d].\n",iRet);
+					throw(CTrsExp(ERR_DB_UPDATE,"InsertSettleDB failed!"));
+				}
+				//AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
+
+			}
+		}
+
+		/**--------end---------------*/
+		//清分技术服务方
+		CDEBUG_LOG("total_service_profit:[%d] total_bm_profit[%d]\n", total_service_profit, total_bm_profit);
+		TRemitBill remitBill;
+		if (0 < total_service_profit)
+		{
+
+
+			remitBill.Reset();
+			remitBill.account_id = m_Req.sBmId;
+			remitBill.sType = SERVICE_TYPE_NAME;
+			remitBill.sRemitfee = F2Y(toString(total_service_profit));
+			remitBill.remit_fee = total_service_profit;
+			remitBill.sPayTime = toDate(strPayTime);
+			remitBill.sRemitTime = toDate(getSysDate());
+			remitBill.sRemark = SERVICE_REMARK_NAME;
+
+			//orderStat.Reset();
+			//orderStat.trade_net_amount = total_service_profit;
+			orderStat.mch_id = remitBill.account_id;
+			orderStat.shared_profit  = total_service_profit;
+			orderStat.shop_net_amount = total_service_profit;
+			iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+									m_batch_no,m_Req.sPayChannel,channel_code,orderStat,remitBill,SERVICE_TYPE_NAME);
+			if (iRet < 0)
+			{
+				CERROR_LOG("InsertDistributionDB service failed!iRet =[%d]", iRet);
+				throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB service failed!"));
+			}
+
+			//写结算表
+			iRet = m_stTransFlowDao.InsertSettleDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+										m_batch_no,m_Req.sPayChannel,remitBill);
+			if (iRet < 0)
+			{
+				CERROR_LOG("InsertSettleDB failed! iRet[%d].\n",iRet);
+				throw(CTrsExp(ERR_DB_UPDATE,"InsertSettleDB failed!"));
+			}
+			//AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
 
 		}
+		if (0 < total_bm_profit)
+		{
+			//清分银行机构方
+			remitBill.Reset();
+			remitBill.account_id = m_Req.sBmId;
+			remitBill.sType = BM_TYPE_NAME;
+			remitBill.sRemitfee = F2Y(toString(total_bm_profit));
+			remitBill.remit_fee = total_bm_profit;
+			remitBill.sPayTime = toDate(strPayTime);
+			remitBill.sRemitTime = toDate(getSysDate());
+			remitBill.sRemark = BM_REMARK_NAME;
+
+			//orderStat.Reset();
+			//orderStat.trade_net_amount = total_bm_profit;
+			orderStat.mch_id  = remitBill.account_id;
+			orderStat.shared_profit  = total_bm_profit;
+			orderStat.shop_net_amount = total_bm_profit;
+
+			iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+									m_batch_no,m_Req.sPayChannel,channel_code,orderStat,remitBill,BM_TYPE_NAME);
+			if (iRet < 0)
+			{
+				CERROR_LOG("InsertDistributionDB bm failed!iRet =[%d]", iRet);
+				throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB bm failed!"));
+			}
+
+				//写结算表
+				iRet = m_stTransFlowDao.InsertSettleDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
+											m_batch_no,m_Req.sPayChannel,remitBill);
+				if (iRet < 0)
+				{
+					CERROR_LOG("InsertSettleDB failed! iRet[%d].\n",iRet);
+					throw(CTrsExp(ERR_DB_UPDATE,"InsertSettleDB failed!"));
+				}
+
+			//AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
+
+		}
+		//m_total_count = tremitMap.size();
+		//m_total_amount = total_amount;
+		//提交事务
+		m_mysql.Commit(*pBillDb);
 	}
 
-	/**--------end---------------*/
-
-	CDEBUG_LOG("total_service_profit:[%d] total_bm_profit[%d]\n", total_service_profit, total_bm_profit);
-
-	orderStat.Reset();
-	orderStat.trade_net_amount = total_service_profit;
-	iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
-							m_batch_no,m_Req.sPayChannel,orderStat,SERVICE_TYPE_NAME);
-	if (iRet < 0)
+	catch(CTrsExp& e)
 	{
-		CERROR_LOG("InsertDistributionDB service failed!iRet =[%d]", iRet);
-		throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB service failed!"));
+		CERROR_LOG("transaction insert settle table fail:[%s]",e.retmsg.c_str());
+		m_mysql.Rollback(*pBillDb);
+		throw(CTrsExp(ERR_BILL_CONTRAST_MODE,e.retmsg));
 	}
-
-	if (0 < total_service_profit)
-	{
-		TRemitBill remitBill;
-		remitBill.Reset();
-		remitBill.account_id = m_Req.sBmId;
-		remitBill.sType = SERVICE_TYPE_NAME;
-		remitBill.fremit_fee = (float)total_service_profit / (float)100;
-		remitBill.remit_fee = total_service_profit;
-		remitBill.sPayTime = toDate(strPayTime);
-		remitBill.sRemitTime = toDate(getSysDate());
-		remitBill.sRemark = SERVICE_REMARK_NAME;
-
-		AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
-
-	}
-
-	orderStat.Reset();
-	orderStat.trade_net_amount = total_bm_profit;
-	iRet = m_stTransFlowDao.InsertDistributionDB(*pBillDb,m_Req.sBmId,nowdate(m_Req.sInputTime),
-							m_batch_no,m_Req.sPayChannel,orderStat,BM_TYPE_NAME);
-	if (iRet < 0)
-	{
-		CERROR_LOG("InsertDistributionDB bm failed!iRet =[%d]", iRet);
-		throw(CTrsExp(ERR_DB_UPDATE,"InsertDistributionDB bm failed!"));
-	}
-	if (0 < total_bm_profit)
-	{
-		TRemitBill remitBill;
-		remitBill.Reset();
-		remitBill.account_id = m_Req.sBmId;
-		remitBill.sType = BM_TYPE_NAME;
-		remitBill.fremit_fee = (float)total_bm_profit / (float)100;
-		remitBill.remit_fee = total_bm_profit;
-		remitBill.sPayTime = toDate(strPayTime);
-		remitBill.sRemitTime = toDate(getSysDate());
-		remitBill.sRemark = BM_REMARK_NAME;
-
-		AddSettleLog(m_Req,remitBill,tremitMap,iIndex,total_amount);
-
-	}
-	m_total_count = tremitMap.size();
-	m_total_amount = total_amount;
 
 
 }
@@ -857,7 +975,7 @@ void CBillContrastSPDB::UpdateBillBatchDB(ProPullBillReq& m_stReq)
     	  <<BILL_DB<<"."<<BILL_BATCH
 		  <<" set bill_batch_status = '3',modify_time = now()"
 		  <<" where bm_id ='"<<m_stReq.sBmId<<"' and bill_date='"<<nowdate(m_stReq.sInputTime)
-		  <<"' and pay_channel ='"<<m_stReq.sPayChannel<<"';";
+		  <<"' and pay_channel ='"<<m_stReq.sPayChannel<<"' and bill_batch_no = '"<<m_batch_no<<"';";
 
     iRet = m_mysql.Execute(*pBillDb,sqlss.str().c_str());
     if(iRet != 1)
@@ -906,7 +1024,7 @@ void CBillContrastSPDB::InitBillBatchDB(ProPullBillReq& m_stReq)
     if(iRet == 1)
     {
 		CERROR_LOG("settle record has exist [%] !!!",outMap["batch_no"].c_str());
-		throw(CTrsExp(ERR_BILL_BATCH_EXIST,"settle record has exist!!"));
+		throw(CTrsExp(ERR_BILL_BATCH_EXIST,errMap[ERR_BILL_FILE_EXIST]));
     }
 
 
@@ -956,8 +1074,14 @@ void CBillContrastSPDB::GetBatchNo(const string& strtype,const string& bill_date
 	paramMap.insert(StringMap::value_type("iIdLen","3"));
 	//MapToUrl(paramMap,szToBuff,sizeof(szToBuff),"\r\n");
 
-	idSocket->SendAndRecv(paramMap,szRecvBuff,sizeof(szRecvBuff));
+	idSocket->SendAndRecvLineEx(paramMap,szRecvBuff,sizeof(szRecvBuff),"\r\n");
 	CDEBUG_LOG("recv Msg [%s]",szRecvBuff);
+
+	if(NULL == szRecvBuff||strlen(szRecvBuff) == 0)  //
+	{
+		CDEBUG_LOG("get BatchNo Fail!!,err_msg[%s]",recvMap["retmsg"].c_str());
+		throw(CTrsExp(SYSTEM_ERR,"get BatchNo Fail!!"));
+	}
 
 	Kv2Map(szRecvBuff,recvMap);
 
@@ -1014,7 +1138,7 @@ void CBillContrastSPDB::GetBatchNo(const string& strtype,const string& bill_date
 //	}
 }
 
-void CBillContrastSPDB::ProcOverFlowData(const string& resBody,const string& tableName)
+void CBillContrastSPDB::ProcOverFlowData(const string& resBody,const string& tableName,ProPullBillReq& m_stReq)
 {
 	int iRet;
 	tinyxml2::XMLDocument rsp_doc;
@@ -1059,6 +1183,15 @@ void CBillContrastSPDB::ProcOverFlowData(const string& resBody,const string& tab
 		orderMap["total_fee"]  			= ITOS(cJSON_GetObjectItem(root, "total_fee")->valueint);
 		orderMap["trade_type"]  		= cJSON_GetObjectItem(root, "trade_type")->valuestring;
 		orderMap["transaction_id"]  	= cJSON_GetObjectItem(root, "transaction_id")->valuestring;
+
+		//校验银行编号和渠道
+		if(orderMap["bm_id"] != m_stReq.sBmId || orderMap["pay_channel"] != m_stReq.sPayChannel)
+		{
+			CERROR_LOG("ret_msg bm_id or channel not match bm_id：[%s]--[%s],channel:[%s]---[%s]!",
+					orderMap["bm_id"].c_str(),m_stReq.sBmId.c_str(),
+					orderMap["pay_channel"].c_str(),m_stReq.sPayChannel.c_str());
+			return;
+		}
 
 		//嵌套Json
 		cJSON * chanel_detail = cJSON_GetObjectItem(root, "chanel_detail");
@@ -1117,6 +1250,11 @@ void CBillContrastSPDB::ProcException(ProPullBillReq& m_stReq,int starttime,int 
 {
 	if(exce_type == 1)
 	{
+		if(m_batch_no.empty()) //批次号没生成或为空时，不更新记录
+		{
+			return ;
+		}
+
 		int iRet = -1;
 		clib_mysql* pBillDb = Singleton<CSpeedPosConfig>::GetInstance()->GetBillDB();
 		CMySQL m_mysql;
@@ -1127,7 +1265,7 @@ void CBillContrastSPDB::ProcException(ProPullBillReq& m_stReq,int starttime,int 
 	    	  <<BILL_DB<<"."<<BILL_BATCH
 			  <<" set bill_batch_status = '4',modify_time = now()"
 			  <<" where bm_id ='"<<m_stReq.sBmId<<"' and bill_date='"<<nowdate(m_stReq.sInputTime)
-			  <<"' and pay_channel ='"<<m_stReq.sPayChannel<<"';";
+			  <<"' and pay_channel ='"<<m_stReq.sPayChannel<<"' and bill_batch_no = '"<<m_batch_no<<"';";
 
 	    iRet = m_mysql.Execute(*pBillDb,sqlss.str().c_str());
 	    if(iRet != 1)
@@ -1135,7 +1273,10 @@ void CBillContrastSPDB::ProcException(ProPullBillReq& m_stReq,int starttime,int 
 	    	CERROR_LOG("update bill_db.bill_download fail!!!");
 	    	throw(CTrsExp(ERR_DB_UPDATE,errMap[ERR_DB_UPDATE]));
 	    }
+
+
 	}
 
 }
+
 

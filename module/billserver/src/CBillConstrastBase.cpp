@@ -6,6 +6,7 @@
  */
 
 #include "CBillConstrastBase.h"
+#include "CCommFunc.h"
 
 extern CSpeedPosServer g_cOrderServer;
 
@@ -235,12 +236,20 @@ void CBillContrastBase::Copy2GetFile(ProPullBillReq& m_Req,int starttime)
 
 	if(m_Req.sPayChannel == WX_API_PAY_CHANNEL)
 	{
+		CDEBUG_LOG("strSftpWxLongRangPath = [%s]",strSftpWxLongRangPath.c_str());
 		tars::TC_File::copyFile(strSftpWxLongRangPath,sWxBillSrcFileName,true);
 	}
 
 	if(m_Req.sPayChannel == ALI_API_PAY_CHANNEL)
 	{
+		CDEBUG_LOG("strSftpAliLongRangPath = [%s]",strSftpAliLongRangPath.c_str());
 		tars::TC_File::copyFile(strSftpAliLongRangPath,sAliBillSrcFileName,true);
+		//转码    --hawrk 在下载的时候 已转
+//		char szToBuf[256] = { 0 };
+//		snprintf(szToBuf, sizeof(szToBuf), "iconv -f GBK -t UTF-8 %s -o %s\n", sAliBillSrcFileName.c_str(),sAliBillSrcFileName.c_str());
+//		CDEBUG_LOG("szToBuf [%s]", szToBuf);
+//		system(szToBuf);
+
 	}
 
 	TrimBillFile(m_Req);
@@ -476,7 +485,7 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 			remitBill.account_id = orderStat.mch_id;
 			remitBill.sType = SHOP_TYPE_NAME;
 			remitBill.remit_fee = orderStat.shop_net_amount;
-			remitBill.fremit_fee = (float)orderStat.shop_net_amount / (float)100;
+			remitBill.sRemitfee = F2Y(toString(orderStat.shop_net_amount));
 			remitBill.sPayTime = toDate(strPayTime);
 			remitBill.sRemitTime = toDate(getSysDate());
 			remitBill.sRemark = SHOP_REMARK_NAME;
@@ -505,7 +514,7 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 			remitBill.Reset();
 			remitBill.account_id = channel_id;
 			remitBill.sType = CHANNEL_TYPE_NAME;
-			remitBill.fremit_fee = (float)channel_profit / (float)100;
+			remitBill.sRemitfee = F2Y(toString(channel_profit));
 			remitBill.remit_fee = channel_profit;
 			remitBill.sPayTime = toDate(strPayTime);
 			remitBill.sRemitTime = toDate(getSysDate());
@@ -525,7 +534,7 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 		remitBill.Reset();
 		remitBill.account_id = m_Req.sBmId;
 		remitBill.sType = SERVICE_TYPE_NAME;
-		remitBill.fremit_fee = (float)total_service_profit / (float)100;
+		remitBill.sRemitfee = F2Y(toString(total_service_profit));
 		remitBill.remit_fee = total_service_profit;
 		remitBill.sPayTime = toDate(strPayTime);
 		remitBill.sRemitTime = toDate(getSysDate());
@@ -540,7 +549,7 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 		remitBill.Reset();
 		remitBill.account_id = m_Req.sBmId;
 		remitBill.sType = BM_TYPE_NAME;
-		remitBill.fremit_fee = (float)total_bm_profit / (float)100;
+		remitBill.sRemitfee = F2Y(toString(total_bm_profit));
 		remitBill.remit_fee = total_bm_profit;
 		remitBill.sPayTime = toDate(strPayTime);
 		remitBill.sRemitTime = toDate(getSysDate());
@@ -565,10 +574,10 @@ void CBillContrastBase::ProRemitBillProcess(ProPullBillReq& m_Req,int starttime)
 	{
 		//
 		char szBuf[1024] = { 0 };
-		snprintf(szBuf, sizeof(szBuf), "%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%.2f,%s,%s\n",
+		snprintf(szBuf, sizeof(szBuf), "%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 			itRemit->first, itRemit->second.sPayTime.c_str(), itRemit->second.account_id.c_str(), itRemit->second.sType.c_str(),itRemit->second.sName.c_str(),
 			itRemit->second.sBankOwner.c_str(), itRemit->second.sBankCardNo.c_str(), itRemit->second.sBankCardType.c_str(),
-			itRemit->second.sBankType.c_str(),itRemit->second.sBranchNo.c_str(),itRemit->second.fremit_fee,
+			itRemit->second.sBankType.c_str(),itRemit->second.sBranchNo.c_str(),itRemit->second.sRemitfee.c_str(),
 			itRemit->second.sRemitTime.c_str(),itRemit->second.sRemark.c_str());
 		pSettleFile->raw(szBuf);
 	}

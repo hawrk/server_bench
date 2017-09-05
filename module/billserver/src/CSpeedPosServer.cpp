@@ -24,6 +24,7 @@
 #include "urlparammap.h"
 #include "network.h"
 #include "util/tc_file.h"
+#include "CCommFunc.h"
 
 
 CSpeedPosServer::CSpeedPosServer()
@@ -407,6 +408,7 @@ int CSpeedPosServer::CallGetBankNoApi(TRemitBill& remitBill)
 	if ((iterJson = rspMap.find("branch_no")) != rspMap.end()) remitBill.sBranchNo = iterJson->second.toString();   //银行网点号
 	if ((iterJson = rspMap.find("shop_name")) != rspMap.end()) remitBill.sShopName = iterJson->second.toString();  //商户名称
 	if ((iterJson = rspMap.find("cycle")) != rspMap.end()) remitBill.sCycle = iterJson->second.toString();    //结算周期
+	if ((iterJson = rspMap.find("bank_flag")) != rspMap.end()) remitBill.sBankFlag = iterJson->second.toString();   //本行跨行标识
 
 	CDEBUG_LOG(" sBankCardNo:[%s] sBankCardType[%s]:sBankOwner:[%s] sShopName[%s]\n",
 			remitBill.sBankCardNo.c_str(), remitBill.sBankCardType.c_str(),remitBill.sBankOwner.c_str(), remitBill.sName.c_str());
@@ -463,7 +465,7 @@ int CSpeedPosServer::CallGetPayFailApi(const std::string& strBmId, int& iIndex, 
 				remitBill.Reset();
 				remitBill.account_id = jMap["accountid"].toString() ;
 				remitBill.remit_fee = atoi(jMap["payed_amount"].toString().c_str());
-				remitBill.fremit_fee = (float)remitBill.remit_fee / (float)100;
+				remitBill.sRemitfee = F2Y(toString(remitBill.remit_fee));
 				remitBill.sPayTime =  jMap["dateflag"].toString();
 				remitBill.sRemitTime = toDate(getSysDate());
 				remitBill.sRemark =  jMap["remark"].toString();
@@ -576,6 +578,7 @@ int CSpeedPosServer::CallUpdateSettleLogApi(const std::string& strBmId, const st
 
 	addSettleMap.insert(StringMap::value_type("status", toString(status)));
 
+	addSettleMap.insert(StringMap::value_type("ret_code",remitBill.sRetCode));  //结算结果码
 	addSettleMap.insert(StringMap::value_type("pay_remark",remitBill.sPayRemark));  //结算描述
 	//addSettleMap.insert(StringMap::value_type("paytime",remitBill.sBranchNo)); //结算时间
 

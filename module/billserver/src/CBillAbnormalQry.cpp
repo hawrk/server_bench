@@ -111,9 +111,10 @@ INT32 CBillAbnormalQry::CheckInput()
 	Check::CheckStrParam("input_time", m_InParams["input_time"], 1, 10);
 	Check::CheckStrParam("end_time", m_InParams["end_time"], 1, 10);
 	Check::CheckStrParam("pay_channel", m_InParams["pay_channel"], 1, 10);
+	Check::CheckStrParam("bill_status", m_InParams["bill_status"], 1, 10);
 
-	Check::CheckDigitalParam("bill_status", m_InParams["bill_status"], 1, 5);
-	Check::CheckDigitalParam("proc_status", m_InParams["proc_status"], 1, 5);
+	//Check::CheckDigitalParam("bill_status", m_InParams["bill_status"], 1, 5);
+	Check::CheckDigitalParam("proc_status", m_InParams["proc_status"], 0, 5);
 
 	Check::CheckPage(m_InParams["page"]);
 	Check::CheckLimit(m_InParams["limit"]);

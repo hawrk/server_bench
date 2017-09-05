@@ -72,7 +72,7 @@ void CAgentPayBillDealTask::CheckInput()
 {
 	BEGIN_LOG(__func__);
 
-	Check::CheckStrParam("settle_date",m_InParams["settle_date"],8,8);
+	Check::CheckIsDigitalParam("settle_date",m_InParams["settle_date"],8,8);
 
 	if(!m_InParams["settle_date"].empty())
 	{
@@ -176,77 +176,33 @@ void CAgentPayBillDealTask::CompareSucce()
 	string szDBname = string(AGENT_PAY_ORDER_DB) + string("_") + m_InParams["settle_date"].substr(0,6);
 	string szTablename = APAY_ORDER_TABLE;
 
-	string szSqlString1 = "";
-	string szSqlString2 = "";
+	QryLocalBill(szDBname,szTablename,localOrderMap);
 
-	szSqlBuf	<<	" SELECT order_no,out_order_no,order_type,biz_type,mch_id,pay_channel_id,mch_agentpay_acct_id,payment_fee,order_status"
-				<<	" FROM ";
-	szSqlString1 = szSqlBuf.str();
-
-	szSqlBuf.str("");
-	szSqlBuf	<<	" WHERE create_time >= date_format("	<<	m_InParams["settle_date"]	<<	"000000,'%Y-%m-%d %H:%i:%s')"
-				<<	" AND create_time <= date_format("	<<	m_InParams["settle_date"]	<<	"235959,'%Y-%m-%d %H:%i:%s')"
-				<<	" AND order_type="	<<	ORDER_TYPE_APAY
-				<<	" AND pay_channel_id="	<<	APAY_CHL_WEBANK	
-				<<	" AND pyh_status="	<<	APAY_ORDER_PYH_STATUS_VALID	<<	";";
-	szSqlString2 = szSqlBuf.str();
-
-	CDEBUG_LOG("szSqlString1=[%s],szSqlString2=[%s]",szSqlString1.c_str(),szSqlString2.c_str());
-
-	//根据链接池循环查询每个DB的10张表
-	CDBPool* pDbPool = Singleton<CSpeedPosConfig>::GetInstance()->GetApayDBPool();
-	QryTableLoop(pDbPool,m_SqlHandle,szDBname,szTablename,szSqlString1,szSqlString2,resMVector);
-
-	INT32 iLocalVecSize = resMVector.size();
-	CDEBUG_LOG("local order resMVector's size=[%d]",iLocalVecSize);
-
-	if(iLocalVecSize <= 0)
+	//如果对账日期是月初1号,需跨库查询,特殊处理
+	//需额外查询上个月的库表
+	if(m_InParams["settle_date"].substr(6,2) == "01")
 	{
-		CDEBUG_LOG("no order found!");
-		//return;
+		//查询上个月库表
+		INT32 iMonTemp = STOI(m_InParams["settle_date"].substr(0,6));
+		szDBname = string(AGENT_PAY_ORDER_DB) + string("_") + ITOS(iMonTemp-1);
+		szTablename = APAY_ORDER_TABLE;
+		
+		QryLocalBill(szDBname,szTablename,localOrderMap);
 	}
-	
-	for(int i=0;i<iLocalVecSize;i++)
-	{
-		SqlResultSet tempMap = resMVector[i];
-		localOrderMap[tempMap["order_no"]] = tempMap;
-	}
-	CDEBUG_LOG("localOrderMap's size=[%d]",localOrderMap.size());
 
-	//查询微众账单
-	szSqlBuf.str("");
-	szSqlBuf	<<	"SELECT merId,orderId,amount,reqDate,settleDate,CASE status WHEN 'PR00' THEN 1 WHEN 'PR02' THEN 3 WHEN 'PR03' THEN 2 ELSE -1 END AS status,respCode,respMsg"
-				<<	" FROM "
-				<<	AGENT_PAY_BILL_DB	<<	"."	<<	APAY_WEBANK_BILL_TABLE
-				<<	" WHERE "
-				<<	"settleDate='"	<<	m_InParams["settle_date"]	<<	"';";
+	//查询微众账单DB
+	QryWeBankBill(AGENT_PAY_BILL_DB,APAY_WEBANK_BILL_TABLE,webankOrderMap);
 
-	clib_mysql* cMysql =  Singleton<CSpeedPosConfig>::GetInstance()->GetApayBillDB();
-	m_SqlHandle.QryAndFetchResMVector(*cMysql,szSqlBuf.str().c_str(),resMVector);
-
-	INT32 iWeBankVecSize = resMVector.size();
-	CDEBUG_LOG("webank bill resMVector's size=[%d]",iWeBankVecSize);
-
-	if(iWeBankVecSize <= 0)
-	{
-		CDEBUG_LOG("no webank bill found!");
-		//return;
-	}
-	
-	for(int i=0;i<iWeBankVecSize;i++)
-	{
-		SqlResultSet tempMap = resMVector[i];
-		webankOrderMap[tempMap["orderId"]] = tempMap;
-	}
-	CDEBUG_LOG("webankOrderMap's size=[%d]",webankOrderMap.size());	
+	INT32 iLocalBillSize  = localOrderMap.size();
+	INT32 iWeBankBillSize = webankOrderMap.size();
 
 	//两边都没有订单，无法对账
-	if(iLocalVecSize == 0 && iWeBankVecSize == 0)
+	if(iLocalBillSize == 0 && iWeBankBillSize == 0)
 	{
 		CDEBUG_LOG("date=[%s] had no trade data!",m_InParams["settle_date"].c_str());
 		throw(CTrsExp(ERR_APAY_NOT_BILL_DATA,"该天没有交易,无法完成对账"));
 	}
-	else if(iLocalVecSize > 0 && iWeBankVecSize == 0)
+	else if(iLocalBillSize > 0 && iWeBankBillSize == 0)
 	{
 		//本地有交易订单，而微众对账单为空，抛错
 		CDEBUG_LOG("date=[%s] webank's bill data is empty!",m_InParams["settle_date"].c_str());
@@ -265,13 +221,14 @@ void CAgentPayBillDealTask::CompareSucce()
 
 		if(webIter == webankOrderMap.end())
 		{
-			if(orderSet["order_status"] ==  APAY_ORDER_STATUS_DEALING 
-				|| orderSet["order_status"] == APAY_ORDER_STATUS_FAILED)
+			if(orderSet["order_status"] == APAY_ORDER_STATUS_FAILED)
 			{
-				//处理中or失败的订单，不在微众对账单中，属于正常
+				//失败的订单，不在微众对账单中，属于正常
 				continue;
-			}		
-			else if(orderSet["order_status"] == APAY_ORDER_STATUS_SUCCESS)
+			}	
+			else if((orderSet["order_status"] == APAY_ORDER_STATUS_SUCCESS
+					  || orderSet["order_status"] == APAY_ORDER_STATUS_DEALING)
+					&& orderSet["settle_date"] == m_InParams["settle_date"])
 			{
 				NameValueMap inMap,resMap;
 								
@@ -279,7 +236,7 @@ void CAgentPayBillDealTask::CompareSucce()
 				inMap["order_status"] = APAY_ORDER_STATUS_FAILED;
 				CallAgentPayServer(inMap,resMap);
 				//UpdateOrder(orderSet,APAY_ORDER_STATUS_FAILED);
-			}
+			}			
 		}
 		else
 		{
@@ -297,6 +254,7 @@ void CAgentPayBillDealTask::CompareSucce()
 
 				inMap["order_no"] = szOrderNo;
 				inMap["order_status"] = APAY_ORDER_STATUS_SUCCESS;
+				inMap["settle_date"] = webankSet["settleDate"];
 				CallAgentPayServer(inMap,resMap);
 				//UpdateOrder(orderSet,APAY_ORDER_STATUS_SUCCESS);
 			}
@@ -314,7 +272,7 @@ void CAgentPayBillDealTask::CompareSucce()
 				else if(orderSet["payment_fee"] != Y2F(webankSet["amount"]))
 				{
 					//对比金额
-					szErrMsg = "交易金额不一致";	
+					szErrMsg = "交易金额不一致";
 				}
 				else if(webankSet["status"] != APAY_ORDER_STATUS_SUCCESS)
 				{
@@ -469,6 +427,93 @@ void CAgentPayBillDealTask::CompareRefund()
 			}
 		}
 	}
+}
+
+//查询本地账单DB
+void CAgentPayBillDealTask::QryLocalBill(string szDbName,string szTableName,StrSqlResultSetMap & localOrderMap)
+{
+	BEGIN_LOG(__func__);
+
+	stringstream szSqlBuf("");
+	SqlResultMapVector resMVector;
+	resMVector.clear();
+
+	//查询本地账单
+	string szSqlString1 = "";
+	string szSqlString2 = "";
+
+	szSqlBuf	<<	" SELECT order_no,out_order_no,order_type,biz_type,mch_id,pay_channel_id,mch_agentpay_acct_id,payment_fee,order_status,settle_date"
+				<<	" FROM ";
+	szSqlString1 = szSqlBuf.str();
+
+	szSqlBuf.str("");
+	szSqlBuf	<<	" WHERE "
+				<<	" ((create_time >= date_format("	<<	m_InParams["settle_date"]	<<	"000000,'%Y-%m-%d %H:%i:%s')"
+				<<	" AND create_time <= date_format("	<<	m_InParams["settle_date"]	<<	"235959,'%Y-%m-%d %H:%i:%s'))"
+				<<	" OR settle_date='" <<	m_InParams["settle_date"]	<<	"')"
+				<<	" AND order_type="	<<	ORDER_TYPE_APAY
+				<<	" AND pay_channel_id="	<<	APAY_CHL_WEBANK 
+				<<	" AND pyh_status="	<<	APAY_ORDER_PYH_STATUS_VALID <<	";";
+	szSqlString2 = szSqlBuf.str();
+
+	CDEBUG_LOG("szSqlString1=[%s],szSqlString2=[%s]",szSqlString1.c_str(),szSqlString2.c_str());
+
+	//根据链接池循环查询每个DB的10张表
+	CDBPool* pDbPool = Singleton<CSpeedPosConfig>::GetInstance()->GetApayDBPool();
+	QryTableLoop(pDbPool,m_SqlHandle,szDbName,szTableName,szSqlString1,szSqlString2,resMVector);
+
+	INT32 iLocalVecSize = resMVector.size();
+	CDEBUG_LOG("local order resMVector's size=[%d]",iLocalVecSize);
+
+	if(iLocalVecSize <= 0)
+	{
+		CDEBUG_LOG("no order found!");
+		//return;
+	}
+	
+	for(int i=0;i<iLocalVecSize;i++)
+	{
+		SqlResultSet tempMap = resMVector[i];
+		localOrderMap[tempMap["order_no"]] = tempMap;
+	}
+	CDEBUG_LOG("localOrderMap's size=[%d]",localOrderMap.size());	
+}
+
+//查询微众账单DB
+void CAgentPayBillDealTask::QryWeBankBill(string szDbName,string szTableName,StrSqlResultSetMap & webankOrderMap)
+{
+	BEGIN_LOG(__func__);
+
+	stringstream szSqlBuf("");
+	SqlResultMapVector resMVector;
+	resMVector.clear();
+
+	//查询微众账单
+	szSqlBuf.str("");
+	szSqlBuf	<<	"SELECT merId,orderId,amount,reqDate,settleDate,CASE status WHEN 'PR00' THEN 1 WHEN 'PR02' THEN 3 WHEN 'PR03' THEN 2 ELSE -1 END AS status,respCode,respMsg"
+				<<	" FROM "
+				<<	AGENT_PAY_BILL_DB	<<	"." <<	APAY_WEBANK_BILL_TABLE
+				<<	" WHERE "
+				<<	"settleDate='"	<<	m_InParams["settle_date"]	<<	"';";
+
+	clib_mysql* cMysql =  Singleton<CSpeedPosConfig>::GetInstance()->GetApayBillDB();
+	m_SqlHandle.QryAndFetchResMVector(*cMysql,szSqlBuf.str().c_str(),resMVector);
+
+	INT32 iWeBankVecSize = resMVector.size();
+	CDEBUG_LOG("webank bill resMVector's size=[%d]",iWeBankVecSize);
+
+	if(iWeBankVecSize <= 0)
+	{
+		CDEBUG_LOG("no webank bill found!");
+		//return;
+	}
+
+	for(int i=0;i<iWeBankVecSize;i++)
+	{
+		SqlResultSet tempMap = resMVector[i];
+		webankOrderMap[tempMap["orderId"]] = tempMap;
+	}
+	CDEBUG_LOG("webankOrderMap's size=[%d]",webankOrderMap.size()); 	
 }
 
 //更新订单状态
@@ -750,7 +795,7 @@ void CAgentPayBillDealTask::DealAcrossDayBill(SqlResultSet & sqlSet)
 	szSqlBuf	<<	" SELECT order_no,out_order_no,order_type,biz_type,mch_id,pay_channel_id,mch_agentpay_acct_id,payment_fee,order_status"
 				<<	" FROM "
 				<<	szDBname	<<	"."	<<	szTablename
-				<<	" WHERE order_no='"	<<	sqlSet["order_no"]	<<	"'"
+				<<	" WHERE order_no='"	<<	sqlSet["orderId"]	<<	"'"
 				<<	" AND order_type="	<<	ORDER_TYPE_APAY
 				<<	" AND pay_channel_id="	<<	APAY_CHL_WEBANK	
 				<<	" AND pyh_status="	<<	APAY_ORDER_PYH_STATUS_VALID	<<	";";
@@ -767,7 +812,7 @@ void CAgentPayBillDealTask::DealAcrossDayBill(SqlResultSet & sqlSet)
 	if(orderSet.size() <= 0)
 	{
 		szErrMsg = "微众账单中多的订单";
-		CERROR_LOG("order_no[%s] is not exist!\n",sqlSet["order_no"].c_str());
+		CERROR_LOG("order_no[%s] is not exist!\n",sqlSet["orderId"].c_str());
 		//throw(CTrsExp(ERR_APAY_ORDER_NOT_EXISTS,"order_no is not exist!"));
 	}
 	else
@@ -775,11 +820,11 @@ void CAgentPayBillDealTask::DealAcrossDayBill(SqlResultSet & sqlSet)
 		//进行对账
 		
 		//对比商户号
-		if(sqlSet["mch_agentpay_acct_id"] != orderSet["merId"])
+		if(orderSet["mch_agentpay_acct_id"] != sqlSet["merId"])
 		{
 			szErrMsg = "商户号不一致";
 		}				
-		else if(sqlSet["payment_fee"] != Y2F(orderSet["amount"]))
+		else if(orderSet["payment_fee"] != Y2F(sqlSet["amount"]))
 		{
 			//对比金额
 			szErrMsg = "交易金额不一致";	
@@ -794,8 +839,9 @@ void CAgentPayBillDealTask::DealAcrossDayBill(SqlResultSet & sqlSet)
 			//订单不为成功，则同步
 			NameValueMap inMap,resMap;
 							
-			inMap["order_no"] = sqlSet["order_no"];
+			inMap["order_no"] = sqlSet["orderId"];
 			inMap["order_status"] = APAY_ORDER_STATUS_SUCCESS;
+			inMap["settle_date"] = sqlSet["settleDate"];
 			CallAgentPayServer(inMap,resMap);
 			//UpdateOrder(orderSet,APAY_ORDER_STATUS_FAILED);
 		
@@ -830,7 +876,10 @@ void CAgentPayBillDealTask::QryBillLog()
 	szSqlBuf	<<	" SELECT settle_date,bill_date,pay_channel_id,total_fee,total_number,bill_status"
 				<<	" FROM "
 				<<	AGENT_PAY_BILL_DB	<<	"." <<	APAY_BILL_LOG_TABLE
-				<<	" WHERE settle_date='" <<	m_InParams["settle_date"]	<<	"';";
+				<<	" WHERE "
+				<<	"settle_date='" <<	m_InParams["settle_date"]	<<	"'"
+				<<	" AND "
+				<<	"pay_channel_id='"	<<	APAY_CHL_WEBANK	<<	"';";
 
 	clib_mysql* m_DBConn = Singleton<CSpeedPosConfig>::GetInstance()->GetApayBillDB();
 	INT32 iRet = m_SqlHandle.QryAndFetchResMap(*m_DBConn,szSqlBuf.str().c_str(),billLogMap);
@@ -842,11 +891,25 @@ void CAgentPayBillDealTask::QryBillLog()
 			CERROR_LOG("bill_status[%s] is invalid!", billLogMap["bill_status"].c_str());
 			throw(CTrsExp(ERR_APAY_BILL_STATUS, "bill_status[%s] is invalid!"));
 		}
+		else
+		{
+			//存在则更新
+			szSqlBuf.str("");
+			szSqlBuf	<<	" UPDATE "
+						<<	AGENT_PAY_BILL_DB	<<	"." <<	APAY_BILL_LOG_TABLE
+						<<	" SET "
+						<<	"bill_status="	<<	APAY_BILL_STATUS_DEALING	<<	","
+						<<	"modify_time=now()"
+						<<	" WHERE "
+						<<	"settle_date='" <<	m_InParams["settle_date"]	<<	"'"
+						<<	" AND "
+						<<	"pay_channel_id='"	<<	APAY_CHL_WEBANK	<<	"'";				
+		}										
 	}
 	else
 	{
+		//不存在，则新增
 		szSqlBuf.str("");
-
 		szSqlBuf	<<	" INSERT INTO "
 					<<	AGENT_PAY_BILL_DB	<<	"." <<	APAY_BILL_LOG_TABLE
 					<<	" SET "
@@ -856,30 +919,30 @@ void CAgentPayBillDealTask::QryBillLog()
 					<<	"pay_channel_name='"	<<	"微众银行"	<<	"',"
 					<<	"bill_status="	<<	APAY_BILL_STATUS_DEALING	<<	","
 					<<	"create_time=now();";
+	}
 
-		try
+	try
+	{
+		//开启事务
+		m_SqlHandle.Begin(*m_DBConn);
+
+		m_SqlHandle.Execute(*m_DBConn,szSqlBuf.str().c_str());
+
+		//提交
+		m_SqlHandle.Commit(*m_DBConn);
+
+		if(m_SqlHandle.getAffectedRows() != 1)
 		{
-			//开启事务
-			m_SqlHandle.Begin(*m_DBConn);
-
-			m_SqlHandle.Execute(*m_DBConn,szSqlBuf.str().c_str());
-
-			//提交
-			m_SqlHandle.Commit(*m_DBConn);
-
-			if(m_SqlHandle.getAffectedRows() != 1)
-			{
-				CERROR_LOG("insert db error,roolback!sql=[%s]!\n",szSqlBuf.str().c_str());
-				throw(CTrsExp(INSERT_DB_ERR,"db insert error!"));
-			}
-		}
-		catch(CTrsExp e)
-		{
-			//回滚
-			m_SqlHandle.Rollback(*m_DBConn);
-			throw e;
+			CERROR_LOG("insert db error,roolback!sql=[%s]!\n",szSqlBuf.str().c_str());
+			throw(CTrsExp(INSERT_DB_ERR,"db insert error!"));
 		}
 	}
+	catch(CTrsExp e)
+	{
+		//回滚
+		m_SqlHandle.Rollback(*m_DBConn);
+		throw e;
+	}	
 }
 
 //更新对账状态

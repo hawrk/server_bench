@@ -67,7 +67,7 @@ public:
     /*
      * @brief 支付宝申请下载支付宝对账单
      */
-    int PushAliBill(std::string& strPath,std::string& detailsuffix,std::string& strGatewayUrl, std::string& strToName);
+    int PushAliBill(std::string& strPath,std::string& detailsuffix,std::string& strGatewayUrl);
 
 
     void LogProcess();

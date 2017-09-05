@@ -134,6 +134,7 @@ inline static void CheckStrParam(const string& tagname,const string& tagvalue,co
  */
 inline static void CheckDigitalParam(const string& tagname, string& tagvalue,const int& min = 0,const int& max = 0,bool optional=false)
 {
+    CDEBUG_LOG("CheckDigitalParam :[%s]", tagvalue.c_str());
     if(ISEMPTY(tagvalue))
     {
         if(!optional)    //选填

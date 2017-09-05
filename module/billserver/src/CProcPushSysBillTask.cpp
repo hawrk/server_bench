@@ -244,57 +244,57 @@ INT32 CProcPushSysBillTask::CheckBillFill()
 			pBillShopFile->GetFileName().c_str(),
 			pBillChannelFile->GetFileName().c_str());
 	}
-	else if (m_stReq.sPayChannel ==  WX_API_PAY_CHANNEL)
-	{
-		sWxBillSrcFillName = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + SRC_PATH + mainConfig.sWXBillSrcPrefix + "_" + getSysDate(m_iBillBeginTime) + ".csv";
-		sWxBillEncFileName = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + ENCRYPT_PATH + mainConfig.sWXBillEncPrefix + "_" + getSysDate(m_iBillBeginTime) + ".csv";
-
-		CDEBUG_LOG("CheckBillFill ! "
-			"sWxBillSrcFillName:[%s] sWxBillEncFileName:[%s] .\n",
-			sWxBillSrcFillName.c_str(), sWxBillEncFileName.c_str());
-		if (access(sWxBillSrcFillName.c_str(), F_OK) == 0)
-		{
-			if (remove(sWxBillSrcFillName.c_str()) != 0)
-			{
-				CERROR_LOG("CheckBillFill  remove sWxBillSrcFillName[%s] Err.\n", sWxBillSrcFillName.c_str());
-			}
-		}
-		if (access(sWxBillEncFileName.c_str(), F_OK) == 0)
-		{
-			if (remove(sWxBillEncFileName.c_str()) != 0)
-			{
-				CERROR_LOG("CheckBillFill  remove sWxBillEncFileName[%s] Err.\n", sWxBillEncFileName.c_str());
-			}
-		}
-
-		std::string sWxBillSrcFillPath = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + SRC_PATH + mainConfig.sWXBillSrcPrefix;
-		pBillWxFile = new CBillFile(sWxBillSrcFillPath.c_str(), m_iBillBeginTime);
-	}
-	else if (0 == strcmp(m_stReq.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
-	{
-		sAliBillSrcFillName = mainConfig.sAliBillPath + m_stReq.sBmId + "/" + SRC_PATH +
-				mainConfig.sAliBillSrcPrefix + "_" + getSysDate(m_iBillBeginTime) + ".csv";
-		sAliBillEncFileName = mainConfig.sAliBillPath + m_stReq.sBmId + "/" + ENCRYPT_PATH +
-				mainConfig.sAliBillEncPrefix + "_" + getSysDate(m_iBillBeginTime) + ".csv";
-
-		CDEBUG_LOG("CheckBillFill ! "
-			"sAliBillSrcFillName:[%s] sAliBillEncFileName:[%s] .\n",
-			sAliBillSrcFillName.c_str(), sAliBillEncFileName.c_str());
-		if (access(sAliBillSrcFillName.c_str(), F_OK) == 0)
-		{
-			if (remove(sAliBillSrcFillName.c_str()) != 0)
-			{
-				CERROR_LOG("CheckBillFill  remove sAliBillSrcFillName[%s] Err.\n", sAliBillSrcFillName.c_str());
-			}
-		}
-		if (access(sAliBillEncFileName.c_str(), F_OK) == 0)
-		{
-			if (remove(sAliBillEncFileName.c_str()) != 0)
-			{
-				CERROR_LOG("CheckBillFill  remove sAliBillEncFileName[%s] Err.\n", sAliBillEncFileName.c_str());
-			}
-		}
-	}
+//	else if (m_stReq.sPayChannel ==  WX_API_PAY_CHANNEL)
+//	{
+//		sWxBillSrcFillName = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + SRC_PATH + mainConfig.sWXBillSrcPrefix + "_" + getSysDate(m_iBillBeginTime);
+//		sWxBillEncFileName = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + ENCRYPT_PATH + mainConfig.sWXBillEncPrefix + "_" + getSysDate(m_iBillBeginTime);
+//
+//		CDEBUG_LOG("CheckBillFill ! "
+//			"sWxBillSrcFillName:[%s] sWxBillEncFileName:[%s] .\n",
+//			sWxBillSrcFillName.c_str(), sWxBillEncFileName.c_str());
+//		if (access(sWxBillSrcFillName.c_str(), F_OK) == 0)
+//		{
+//			if (remove(sWxBillSrcFillName.c_str()) != 0)
+//			{
+//				CERROR_LOG("CheckBillFill  remove sWxBillSrcFillName[%s] Err.\n", sWxBillSrcFillName.c_str());
+//			}
+//		}
+//		if (access(sWxBillEncFileName.c_str(), F_OK) == 0)
+//		{
+//			if (remove(sWxBillEncFileName.c_str()) != 0)
+//			{
+//				CERROR_LOG("CheckBillFill  remove sWxBillEncFileName[%s] Err.\n", sWxBillEncFileName.c_str());
+//			}
+//		}
+//
+//		std::string sWxBillSrcFillPath = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + SRC_PATH + mainConfig.sWXBillSrcPrefix;
+//		pBillWxFile = new CBillFile(sWxBillSrcFillPath.c_str(), m_iBillBeginTime);
+//	}
+//	else if (0 == strcmp(m_stReq.sPayChannel.c_str(), ALI_API_PAY_CHANNEL))
+//	{
+//		sAliBillSrcFillName = mainConfig.sAliBillPath + m_stReq.sBmId + "/" + SRC_PATH +
+//				mainConfig.sAliBillSrcPrefix + "_" + getSysDate(m_iBillBeginTime) + ".csv";
+//		sAliBillEncFileName = mainConfig.sAliBillPath + m_stReq.sBmId + "/" + ENCRYPT_PATH +
+//				mainConfig.sAliBillEncPrefix + "_" + getSysDate(m_iBillBeginTime) + ".csv";
+//
+//		CDEBUG_LOG("CheckBillFill ! "
+//			"sAliBillSrcFillName:[%s] sAliBillEncFileName:[%s] .\n",
+//			sAliBillSrcFillName.c_str(), sAliBillEncFileName.c_str());
+//		if (access(sAliBillSrcFillName.c_str(), F_OK) == 0)
+//		{
+//			if (remove(sAliBillSrcFillName.c_str()) != 0)
+//			{
+//				CERROR_LOG("CheckBillFill  remove sAliBillSrcFillName[%s] Err.\n", sAliBillSrcFillName.c_str());
+//			}
+//		}
+//		if (access(sAliBillEncFileName.c_str(), F_OK) == 0)
+//		{
+//			if (remove(sAliBillEncFileName.c_str()) != 0)
+//			{
+//				CERROR_LOG("CheckBillFill  remove sAliBillEncFileName[%s] Err.\n", sAliBillEncFileName.c_str());
+//			}
+//		}
+//	}
 
 
 
@@ -358,7 +358,7 @@ INT32 CProcPushSysBillTask::HandleProcess()
 		std::string strPath = mainConfig.sAliBillPath + m_stReq.sBmId + "/" + SRC_PATH;
 		std::string strDetailSuffix = mainConfig.sAliDetailSuffix;
 		std::string strGatewayUrl = mainConfig.sAliGateWayUrl;
-		iRet = PushAliBill(strPath,strDetailSuffix,strGatewayUrl,sAliBillSrcFillName);
+		iRet = PushAliBill(strPath,strDetailSuffix,strGatewayUrl);
 		if (iRet < 0)
 		{
 			CERROR_LOG("PushAliBill failed! Ret[%d] Err[%s].\n",iRet, "PushAliBill fail");
@@ -507,8 +507,9 @@ INT32 CProcPushSysBillTask::CreateSysPaymentBillFill(clib_mysql* pDbCon,
 			itOrder->trade_type.c_str(), "SUCCESS", itOrder->total_fee, itOrder->total_commission, itOrder->shop_amount, 0, "",
 			"", "", itOrder->payment_profit, itOrder->channel_profit, itOrder->bm_profit, itOrder->service_profit,0,
 			itOrder->fee_type.c_str(),itOrder->sub_body.c_str(),itOrder->shop_calc_rate);
+
 		//生成支付交易对账单
-		//CDEBUG_LOG("order order_no[%s] szBuf[%s]!", itOrder->order_no.c_str(), szLinBuf);
+		CDEBUG_LOG("order order_no[%s] szBuf[%s]!", itOrder->order_no.c_str(), szLinBuf);
 		pBillShopFile->raw("%s\n", szLinBuf);//所有商户的
 
 		//查询订单号流水
@@ -627,64 +628,110 @@ INT32 CProcPushSysBillTask::PushSysRefundBill()
 int CProcPushSysBillTask::PushWxBill()
 {
 	BEGIN_LOG(__func__);
-	//INT32 iRet = 0;
+	INT32 iRet = 0;
 	time_t tNow = time(NULL);
 
-	const CBillBusiConfig::WxPayCfg* p_wxpay_cfg = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig()
-		->GetWxPayCfg(m_stReq.sBmId);
-
-	if(NULL == p_wxpay_cfg)
-	{
-		CERROR_LOG("p_wxpay_cfg bussiness config not found");
-		return -1;
-	}
-
+	clib_mysql* pBillDb = Singleton<CSpeedPosConfig>::GetInstance()->GetBillDB();
+	CBillBusiConfig* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig();
+	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
+	CMySQL m_mysql;
+	ostringstream sqlss;
+	SqlResultMapVector outmapVector;
 
 	std::string strBillDate = getSysDate(m_iBillBeginTime);
 	std::string strNonceStr = toString(tNow);
 
-	StringMap paramMap;
+    sqlss.str("");
+    sqlss <<"select gateway_id,appid,mch_id,gateway_key "
+    	  <<" from "<<SHOP_DB<<"."<<SHOP_GATEWAY
+		  <<" where bm_id ='"<<m_stReq.sBmId<<"' and pay_channel ='"<<m_stReq.sPayChannel<<"' and status = '1';";
 
-	if (!p_wxpay_cfg->strAppid.empty())
+    iRet = m_mysql.QryAndFetchResMVector(*pBillDb,sqlss.str().c_str(),outmapVector);
+    if(iRet == 1)
+    {
+    	//有数据
+    	for(size_t i = 0;i < outmapVector.size();i++)
+    	{
+    		sWxBillSrcFillName.clear();
+    		StringMap paramMap;
+    		paramMap.insert(StringMap::value_type("appid", outmapVector[i]["appid"]));
+    		paramMap.insert(StringMap::value_type("mch_id", outmapVector[i]["mch_id"]));
+    		paramMap.insert(StringMap::value_type("bill_date", strBillDate));
+    		paramMap.insert(StringMap::value_type("bill_type", "ALL"));
+    		paramMap.insert(StringMap::value_type("nonce_str", strNonceStr));
 
-		paramMap.insert(StringMap::value_type("appid", p_wxpay_cfg->strAppid));
+    		std::string strBody;
+    		std::string strKey = outmapVector[i]["gateway_key"];
+    		std::string strGatewayId = outmapVector[i]["gateway_id"];
+    		int retcode = m_speedposserver.SendRequestWxapi(strKey, WX_DOWNLOAD_URL, paramMap, strBody);
+    		if (retcode)
+    		{
+    			CERROR_LOG("err_code [%d] \n", retcode);
+    			continue;
+    		}
+    		CDEBUG_LOG("WX res BODY:[%s]",strBody.c_str());
+    		//WX返回 如果有对账数据，则返回具体交易数据，如果有错误则返回XML格式报文
+    		tinyxml2::XMLDocument wx_rsp_doc;
+    		if (tinyxml2::XML_SUCCESS != wx_rsp_doc.Parse(strBody.c_str(), strBody.size()))
+    		{
+    			sWxBillSrcFillName = mainConfig.sWXBillPath + m_stReq.sBmId + "/" + SRC_PATH + mainConfig.sWXBillSrcPrefix + "_"
+    					+ strGatewayId + "_" + getSysDate(m_iBillBeginTime) + ".csv";
 
-	if (!p_wxpay_cfg->strMchId.empty())
-		paramMap.insert(StringMap::value_type("mch_id", p_wxpay_cfg->strMchId));
-	paramMap.insert(StringMap::value_type("bill_date", strBillDate));
-	paramMap.insert(StringMap::value_type("bill_type", "ALL"));
-	paramMap.insert(StringMap::value_type("nonce_str", strNonceStr));
+    			tars::TC_File::save2file(sWxBillSrcFillName,strBody);
+    			CDEBUG_LOG("write BillWxFile [%s] finished!",sWxBillSrcFillName.c_str());
+    			continue;
+    		}
+    		tinyxml2::XMLElement * xmlElement = wx_rsp_doc.FirstChildElement("xml");
+    		if (NULL == xmlElement)
+    		{
+    			CERROR_LOG("err_code [%d] err_code_msg [%s]\n", ERR_WX_PASE_RETRUN_DATA, errMap[ERR_WX_PASE_RETRUN_DATA].c_str());
+    		}
 
-	std::string strKey = p_wxpay_cfg->strPaySignKey;
+    	}
+    }
 
-	std::string strBody;
-	int retcode = m_speedposserver.SendRequestWxapi(strKey, WX_DOWNLOAD_URL, paramMap, strBody);
-	if (retcode){
-		CERROR_LOG("err_code [%d] \n", retcode);
-	}
-	tinyxml2::XMLDocument wx_rsp_doc;
-	if (tinyxml2::XML_SUCCESS != wx_rsp_doc.Parse(strBody.c_str(), strBody.size()))
-	{
-		pBillWxFile->_write(strBody.c_str(), strBody.length());
-		CDEBUG_LOG("write BillWxFile [%s] finished!",pBillWxFile->GetFileName().c_str());
-		return 0;
-	}
-
-	tinyxml2::XMLElement * xmlElement = wx_rsp_doc.FirstChildElement("xml");
-	if (NULL == xmlElement)
-	{
-		CERROR_LOG("err_code [%d] err_code_msg [%s]\n", ERR_WX_PASE_RETRUN_DATA, errMap[ERR_WX_PASE_RETRUN_DATA].c_str());
-		return ERR_WX_PASE_RETRUN_DATA;
-	}
-	const char* pwxrsp_return_code = m_speedposserver.GetXmlField(xmlElement, "return_code");
-	const char* pwxrsp_return_msg = m_speedposserver.GetXmlField(xmlElement, "return_msg");
-	const char* pwxrsp_result_code = m_speedposserver.GetXmlField(xmlElement, "result_code");
-
-	CDEBUG_LOG("wx rep :code = [%s],msg =[%s],result_code=[%s]",pwxrsp_return_code,pwxrsp_return_msg,pwxrsp_result_code);
-	if (0 == strcmp(pwxrsp_return_code, "FAIL"))
-	{
-		pBillWxFile->_open();
-	}
+//	StringMap paramMap;
+//
+//	if (!p_wxpay_cfg->strAppid.empty())
+//
+//		paramMap.insert(StringMap::value_type("appid", p_wxpay_cfg->strAppid));
+//
+//	if (!p_wxpay_cfg->strMchId.empty())
+//		paramMap.insert(StringMap::value_type("mch_id", p_wxpay_cfg->strMchId));
+//	paramMap.insert(StringMap::value_type("bill_date", strBillDate));
+//	paramMap.insert(StringMap::value_type("bill_type", "ALL"));
+//	paramMap.insert(StringMap::value_type("nonce_str", strNonceStr));
+//
+//	std::string strKey = p_wxpay_cfg->strPaySignKey;
+//
+//	std::string strBody;
+//	int retcode = m_speedposserver.SendRequestWxapi(strKey, WX_DOWNLOAD_URL, paramMap, strBody);
+//	if (retcode){
+//		CERROR_LOG("err_code [%d] \n", retcode);
+//	}
+//	tinyxml2::XMLDocument wx_rsp_doc;
+//	if (tinyxml2::XML_SUCCESS != wx_rsp_doc.Parse(strBody.c_str(), strBody.size()))
+//	{
+//		pBillWxFile->_write(strBody.c_str(), strBody.length());
+//		CDEBUG_LOG("write BillWxFile [%s] finished!",pBillWxFile->GetFileName().c_str());
+//		return 0;
+//	}
+//
+//	tinyxml2::XMLElement * xmlElement = wx_rsp_doc.FirstChildElement("xml");
+//	if (NULL == xmlElement)
+//	{
+//		CERROR_LOG("err_code [%d] err_code_msg [%s]\n", ERR_WX_PASE_RETRUN_DATA, errMap[ERR_WX_PASE_RETRUN_DATA].c_str());
+//		return ERR_WX_PASE_RETRUN_DATA;
+//	}
+//	const char* pwxrsp_return_code = m_speedposserver.GetXmlField(xmlElement, "return_code");
+//	const char* pwxrsp_return_msg = m_speedposserver.GetXmlField(xmlElement, "return_msg");
+//	const char* pwxrsp_result_code = m_speedposserver.GetXmlField(xmlElement, "result_code");
+//
+//	CDEBUG_LOG("wx rep :code = [%s],msg =[%s],result_code=[%s]",pwxrsp_return_code,pwxrsp_return_msg,pwxrsp_result_code);
+//	if (0 == strcmp(pwxrsp_return_code, "FAIL"))
+//	{
+//		pBillWxFile->_open();
+//	}
 
 	return 0;
 }
@@ -695,82 +742,195 @@ int CProcPushSysBillTask::PushWxBill()
 * out:
 * return: succ:RET_SUCCESS_UNIX
 * */
-int CProcPushSysBillTask::PushAliBill(std::string& strPath, std::string& detailsuffix,std::string& strGatewayUrl,std::string& strToName)
+int CProcPushSysBillTask::PushAliBill(std::string& strPath, std::string& detailsuffix,std::string& strGatewayUrl)
 {
 	BEGIN_LOG(__func__);
-	//INT32 iRet = 0;
-	std::string downloadurl = "";
-	const CBillBusiConfig::AliPayCfg* p_alipay_cfg = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig()->
-		GetAliPayCfg(m_stReq.sBmId);
+	INT32 iRet = 0;
+
+	clib_mysql* pBillDb = Singleton<CSpeedPosConfig>::GetInstance()->GetBillDB();
+	CBillBusiConfig* pBillBusConfig = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig();
+	STBillSrvMainConf mainConfig = pBillBusConfig->mainConfig;
+	CMySQL m_mysql;
+	ostringstream sqlss;
+	SqlResultMapVector outmapVector;
+	std::string downloadurl;
 
 	std::string strBillDate = toDate(getSysDate(m_iBillBeginTime));
-	OpenapiClient openapiClient(p_alipay_cfg->strAppid,
-		p_alipay_cfg->strAppPrivCert,
-		strGatewayUrl,
-		OpenapiClient::default_charset,
-		p_alipay_cfg->strAppCert);
-	JsonMap contentMap;
-	contentMap.insert(JsonMap::value_type(JsonType("bill_type"), JsonType("trade")));
-	contentMap.insert(JsonMap::value_type(JsonType("bill_date"), JsonType(strBillDate)));
 
-	/** 调用Openapi网关 **/
-	JsonMap rspMap;
-	//如果有扩展参数，则按如下方式传入
-	rspMap = openapiClient.invoke(ALI_DOWNLOAD_METHOD, contentMap);
-	if (!rspMap.size()) return ERR_ALI_PAY_RSA_VERIFY;
+    sqlss.str("");
+    sqlss <<"select gateway_id,appid,mch_id,gateway_key,pub_key,pri_key "
+    	  <<" from "<<SHOP_DB<<"."<<SHOP_GATEWAY
+		  <<" where bm_id ='"<<m_stReq.sBmId<<"' and pay_channel ='"<<m_stReq.sPayChannel<<"' and status = '1';";
 
-	JsonMap::const_iterator iter;
-	if ((iter = rspMap.find("code")) != rspMap.end())
-	{
-		if (0 != strcmp(rspMap["code"].toString().c_str(), "10000"))
-		{
-			CERROR_LOG("err_code [%s] err_code_msg [%s]\n", rspMap["code"].toString().c_str(), rspMap["msg"].toString().c_str());
-			return ERR_ALI_PAY_UNIFIEDORDER_ERR_MSG;
-		}
-	}
-	/** 解析支付宝返回报文 **/
-	iter = rspMap.find("bill_download_url");
-	if (iter != rspMap.end())
-	{
-		downloadurl = iter->second.toString();
-	}
+    iRet = m_mysql.QryAndFetchResMVector(*pBillDb,sqlss.str().c_str(),outmapVector);
+    if(iRet == 1)
+    {
+    	//有数据
+    	for(size_t i = 0;i < outmapVector.size();i++)
+    	{
+    		sAliBillSrcFillName.clear();
+    		sAliBillSrcFillName = mainConfig.sAliBillPath + m_stReq.sBmId + "/" + SRC_PATH + mainConfig.sAliBillSrcPrefix + "_"
+    				+ outmapVector[i]["gateway_id"] + "_" + getSysDate(m_iBillBeginTime) + ".csv";
 
-	//SendRequestDownload(downloadurl, strPath);
-	int iSeparateIndex = downloadurl.find("?");
-	std::string downloadFileName;
-	std::string strReq = downloadurl.substr(iSeparateIndex + 1, downloadurl.size() - iSeparateIndex - 1);
-	CDEBUG_LOG("downloadurl = %s strPath = %s strReq = %s \n", downloadurl.c_str(), strPath.c_str(), strReq.c_str());
-	UrlParamMap reqMap;
-	reqMap.parseUrl(strReq.c_str());
-	UrlParamMap::iterator iterUrlMap;
-	iterUrlMap = reqMap.find("downloadFileName");
-	if (iterUrlMap != reqMap.end())
-	{
-		downloadFileName = iterUrlMap->second;
-	}
-	std::string strFile = strPath + downloadFileName;
-	CDEBUG_LOG("downloadFileName = %s strFile = %s \n", downloadFileName.c_str(), strFile.c_str());
-	m_speedposserver.SendRequestDownload(downloadurl, strFile);
-	char szZipBuf[256] = { 0 };
-	snprintf(szZipBuf, sizeof(szZipBuf), "unzip %s -d %s\n", strFile.c_str(), strPath.c_str());
-	system(szZipBuf);
-	std::string strCsvFix = downloadFileName.substr(0, downloadFileName.find("."));
+    		//先把pub_key 内容转存到文件中
+    		std::string strPubPem = "../client/speedpos_bill/conf/cert/abc/alipay_formal_public.pem";
+    		std::string strPriPem = "../client/speedpos_bill/conf/cert/abc/alipay_formal_private.pem";
+    		tars::TC_File::save2file(strPubPem,outmapVector[i]["pub_key"]);
+    		tars::TC_File::save2file(strPriPem,outmapVector[i]["pri_key"]);
 
-	char szToUtf[128] = { 0 };
-	code_convert("UTF-8","GB2312", detailsuffix.c_str(), strlen(detailsuffix.c_str()), szToUtf, sizeof(szToUtf));
+    		OpenapiClient openapiClient(outmapVector[i]["appid"],
+    				strPriPem,
+    			strGatewayUrl,
+    			OpenapiClient::default_charset,
+				strPubPem);
 
-	std::string strTargetName = strCsvFix + szToUtf;
-	CDEBUG_LOG("strCsvFix = %s strTargetName = %s \n", strCsvFix.c_str(), strTargetName.c_str());
-	if(!tars::TC_File::isFileExist(strPath+strTargetName))
-	{
-		CERROR_LOG("detail file not exist [%s]",strTargetName.c_str());
-		throw(CTrsExp(ERR_DETAIL_FILE_NOT_FOUND,errMap[ERR_DETAIL_FILE_NOT_FOUND]));
-	}
-	//换文件名的同时进行转码 gbk -> utf-8
-	char szToBuf[256] = { 0 };
-	snprintf(szToBuf, sizeof(szToBuf), "iconv -f GBK -t UTF-8 %s%s -o %s\n", strPath.c_str(), strTargetName.c_str(), strToName.c_str());
-	CDEBUG_LOG("szToBuf [%s]", szToBuf);
-	system(szToBuf);
+    		JsonMap contentMap;
+    		contentMap.insert(JsonMap::value_type(JsonType("bill_type"), JsonType("trade")));
+    		contentMap.insert(JsonMap::value_type(JsonType("bill_date"), JsonType(strBillDate)));
+
+    		/** 调用Openapi网关 **/
+    		JsonMap rspMap;
+    		//如果有扩展参数，则按如下方式传入
+    		rspMap = openapiClient.invoke(ALI_DOWNLOAD_METHOD, contentMap);
+    		if (!rspMap.size())
+    		{
+    			CDEBUG_LOG("rspMap no contents!");
+    			continue;
+    		}
+    		//解析支付宝返回数据
+    		JsonMap::const_iterator iter;
+    		if ((iter = rspMap.find("code")) != rspMap.end())
+    		{
+    			if (0 != strcmp(rspMap["code"].toString().c_str(), "10000"))
+    			{
+    				CDEBUG_LOG("err_code [%s] err_code_msg [%s]\n", rspMap["code"].toString().c_str(), rspMap["msg"].toString().c_str());
+    				continue;
+    			}
+    		}
+    		iter = rspMap.find("bill_download_url");
+    		if (iter != rspMap.end())
+    		{
+    			downloadurl = iter->second.toString();
+    		}
+
+    		int iSeparateIndex = downloadurl.find("?");
+    		std::string downloadFileName;
+    		std::string strReq = downloadurl.substr(iSeparateIndex + 1, downloadurl.size() - iSeparateIndex - 1);
+    		CDEBUG_LOG("downloadurl = %s strPath = %s strReq = %s \n", downloadurl.c_str(), strPath.c_str(), strReq.c_str());
+    		UrlParamMap reqMap;
+    		reqMap.parseUrl(strReq.c_str());
+    		UrlParamMap::iterator iterUrlMap;
+    		iterUrlMap = reqMap.find("downloadFileName");
+    		if (iterUrlMap != reqMap.end())
+    		{
+    			downloadFileName = iterUrlMap->second;
+    		}
+    		std::string strFile = strPath + downloadFileName;
+    		CDEBUG_LOG("downloadFileName = %s strFile = %s \n", downloadFileName.c_str(), strFile.c_str());
+    		m_speedposserver.SendRequestDownload(downloadurl, strFile);
+    		char szZipBuf[256] = { 0 };
+    		snprintf(szZipBuf, sizeof(szZipBuf), "unzip %s -d %s\n", strFile.c_str(), strPath.c_str());
+    		system(szZipBuf);
+    		std::string strCsvFix = downloadFileName.substr(0, downloadFileName.find("."));
+
+    		char szToUtf[128] = { 0 };
+    		code_convert("UTF-8","GB2312", detailsuffix.c_str(), strlen(detailsuffix.c_str()), szToUtf, sizeof(szToUtf));
+
+    		std::string strTargetName = strCsvFix + szToUtf;
+    		CDEBUG_LOG("strCsvFix = %s strTargetName = %s \n", strCsvFix.c_str(), strTargetName.c_str());
+    		if(!tars::TC_File::isFileExist(strPath+strTargetName))
+    		{
+    			CDEBUG_LOG("detail file not exist [%s]",strTargetName.c_str());
+    			continue;
+    			//throw(CTrsExp(ERR_DETAIL_FILE_NOT_FOUND,errMap[ERR_DETAIL_FILE_NOT_FOUND]));
+    		}
+    		//换文件名的同时进行转码 gbk -> utf-8
+    		char szToBuf[256] = { 0 };
+    		snprintf(szToBuf, sizeof(szToBuf), "iconv -f GBK -t UTF-8 %s%s -o %s\n", strPath.c_str(), strTargetName.c_str(), sAliBillSrcFillName.c_str());
+    		CDEBUG_LOG("szToBuf [%s]", szToBuf);
+    		system(szToBuf);
+
+    	}
+    }
+
+//	std::string downloadurl = "";
+//	const CBillBusiConfig::AliPayCfg* p_alipay_cfg = Singleton<CSpeedPosConfig>::GetInstance()->GetBillBusiConfig()->
+//		GetAliPayCfg(m_stReq.sBmId);
+//
+//	if(NULL == p_alipay_cfg)
+//	{
+//		CERROR_LOG("p_wxpay_cfg bussiness config not found");
+//		return -1;
+//	}
+
+//	std::string strBillDate = toDate(getSysDate(m_iBillBeginTime));
+//	OpenapiClient openapiClient(p_alipay_cfg->strAppid,
+//		p_alipay_cfg->strAppPrivCert,
+//		strGatewayUrl,
+//		OpenapiClient::default_charset,
+//		p_alipay_cfg->strAppCert);
+//	JsonMap contentMap;
+//	contentMap.insert(JsonMap::value_type(JsonType("bill_type"), JsonType("trade")));
+//	contentMap.insert(JsonMap::value_type(JsonType("bill_date"), JsonType(strBillDate)));
+//
+//	/** 调用Openapi网关 **/
+//	JsonMap rspMap;
+//	//如果有扩展参数，则按如下方式传入
+//	rspMap = openapiClient.invoke(ALI_DOWNLOAD_METHOD, contentMap);
+//	if (!rspMap.size()) return ERR_ALI_PAY_RSA_VERIFY;
+//
+//	JsonMap::const_iterator iter;
+//	if ((iter = rspMap.find("code")) != rspMap.end())
+//	{
+//		if (0 != strcmp(rspMap["code"].toString().c_str(), "10000"))
+//		{
+//			CERROR_LOG("err_code [%s] err_code_msg [%s]\n", rspMap["code"].toString().c_str(), rspMap["msg"].toString().c_str());
+//			return ERR_ALI_PAY_UNIFIEDORDER_ERR_MSG;
+//		}
+//	}
+//	/** 解析支付宝返回报文 **/
+//	iter = rspMap.find("bill_download_url");
+//	if (iter != rspMap.end())
+//	{
+//		downloadurl = iter->second.toString();
+//	}
+//
+//	//SendRequestDownload(downloadurl, strPath);
+//	int iSeparateIndex = downloadurl.find("?");
+//	std::string downloadFileName;
+//	std::string strReq = downloadurl.substr(iSeparateIndex + 1, downloadurl.size() - iSeparateIndex - 1);
+//	CDEBUG_LOG("downloadurl = %s strPath = %s strReq = %s \n", downloadurl.c_str(), strPath.c_str(), strReq.c_str());
+//	UrlParamMap reqMap;
+//	reqMap.parseUrl(strReq.c_str());
+//	UrlParamMap::iterator iterUrlMap;
+//	iterUrlMap = reqMap.find("downloadFileName");
+//	if (iterUrlMap != reqMap.end())
+//	{
+//		downloadFileName = iterUrlMap->second;
+//	}
+//	std::string strFile = strPath + downloadFileName;
+//	CDEBUG_LOG("downloadFileName = %s strFile = %s \n", downloadFileName.c_str(), strFile.c_str());
+//	m_speedposserver.SendRequestDownload(downloadurl, strFile);
+//	char szZipBuf[256] = { 0 };
+//	snprintf(szZipBuf, sizeof(szZipBuf), "unzip %s -d %s\n", strFile.c_str(), strPath.c_str());
+//	system(szZipBuf);
+//	std::string strCsvFix = downloadFileName.substr(0, downloadFileName.find("."));
+//
+//	char szToUtf[128] = { 0 };
+//	code_convert("UTF-8","GB2312", detailsuffix.c_str(), strlen(detailsuffix.c_str()), szToUtf, sizeof(szToUtf));
+//
+//	std::string strTargetName = strCsvFix + szToUtf;
+//	CDEBUG_LOG("strCsvFix = %s strTargetName = %s \n", strCsvFix.c_str(), strTargetName.c_str());
+//	if(!tars::TC_File::isFileExist(strPath+strTargetName))
+//	{
+//		CERROR_LOG("detail file not exist [%s]",strTargetName.c_str());
+//		throw(CTrsExp(ERR_DETAIL_FILE_NOT_FOUND,errMap[ERR_DETAIL_FILE_NOT_FOUND]));
+//	}
+//	//换文件名的同时进行转码 gbk -> utf-8
+//	char szToBuf[256] = { 0 };
+//	snprintf(szToBuf, sizeof(szToBuf), "iconv -f GBK -t UTF-8 %s%s -o %s\n", strPath.c_str(), strTargetName.c_str(), strToName.c_str());
+//	CDEBUG_LOG("szToBuf [%s]", szToBuf);
+//	system(szToBuf);
 	return 0;
 }
 

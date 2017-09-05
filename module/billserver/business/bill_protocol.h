@@ -19,23 +19,25 @@ using namespace std;
 
 #ifdef _KOREA_VER
 
-#define  BILL_FILE_TABLE_HEAD                           "거래시간,플랫폼 주문 번호,제3자 주문 번호,지급 시스템 거래 번호,프랫폼 가맹점 번호,채널ID,지급 채널,지급 유형,거래 상황,거래 금액,총 수수료,가맹점 소득,환불 금액,플랫폼 환불 홀수 번호,제3자 환불 홀수 번호,지급 시스템 환불 홀수 번호,지급 수수료,채널 총 중개 수수료,데이터 정리 기관 중개 수수료,기술 봉사료"
-#define  CHANNEL_BILL_FILE_TABLE_HEAD                   "거래시간,플랫폼 주문 번호,프랫폼 가맹점 번호,채널ID,지급 채널,지급 유형,거래 상황,거래 금액,환불 금액,플랫폼 환불 홀수 번호,채널 결산 비용률,채널 중개 수수료"
+#define  BILL_FILE_TABLE_HEAD                           "은행 번호,거래시간,플랫폼 주문 번호,제3자 주문 번호,지급 시스템 거래 번호,프랫폼 가맹점 번호,채널ID,지급 채널,지급 유형,거래 상황,거래 금액,총 수수료,가맹점 소득,환불 금액,플랫폼 환불 홀수 번호,제3자 환불 홀수 번호,지급 시스템 환불 홀수 번호,지급 수수료,채널 총 중개 수수료,데이터 정리 기관 중개 수수료,기술 봉사료"
+#define  CHANNEL_BILL_FILE_TABLE_HEAD                   "은행 번호,거래시간,플랫폼 주문 번호,프랫폼 가맹점 번호,채널ID,지급 채널,지급 유형,거래 상황,거래 금액,환불 금액,플랫폼 환불 홀수 번호,채널 결산 비용률,채널 중개 수수료"
 #define SHOP_REMARK_NAME		"가맹점 거래당 금액"
 #define CHANNEL_REMARK_NAME		"채널 수수료"
 #define SERVICE_REMARK_NAME		"기술 수수료"
 #define BM_REMARK_NAME		    "기관 수수료"
 #else
-#define  BILL_FILE_TABLE_HEAD                           "交易时间,平台订单号,第三方订单号,支付渠道交易号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,总手续费,商户结算金额,退款金额,平台退款单号,第三方退款单号,支付渠道退款单号,支付手续费,渠道总佣金,清分机构佣金,技术服务费,\
-账单状态,货币类型,退款状态,商户名称,结算费率"
-#define  CHANNEL_BILL_FILE_TABLE_HEAD                   "交易时间,平台订单号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,退款金额,平台退款单号,渠道结算费率,渠道佣金"
+#define  BILL_FILE_TABLE_HEAD                           "银行编号,交易时间,平台订单号,第三方订单号,支付渠道交易号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,总手续费,商户结算金额,退款金额,平台退款单号,第三方退款单号,支付渠道退款单号,支付手续费,渠道总佣金,清分机构佣金,技术服务费,\
+账单状态,货币类型,附言,结算费率"
+#define  CHECKED_BILL_FILE_HEAD                           "银行编号,交易时间,平台订单号,第三方订单号,支付渠道交易号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,总手续费,商户结算金额,退款金额,平台退款单号,第三方退款单号,支付渠道退款单号,支付手续费,渠道总佣金,清分机构佣金,技术服务费,附言,"
+
+#define  CHANNEL_BILL_FILE_TABLE_HEAD                   "银行编号,交易时间,平台订单号,平台商户号,渠道ID,支付渠道,支付类型,交易状态,交易金额,退款金额,平台退款单号,渠道结算费率,渠道佣金"
 #define SHOP_REMARK_NAME		"商户收单"
 #define CHANNEL_REMARK_NAME		"渠道手续费"
 #define SERVICE_REMARK_NAME		"技术手续费"
 #define BM_REMARK_NAME		    "机构手续费"
 #endif
 
-#define RESP_SUCCUSS_MSG  "SUCCUSS"
+#define RESP_SUCCUSS_MSG  "SUCCESS"
 
 #define SHOP_TYPE_NAME			"mch"
 #define CHANNEL_TYPE_NAME		"ch"
@@ -54,6 +56,19 @@ using namespace std;
 //wxpay && alipay url
 #define WX_DOWNLOAD_URL       "https://api.mch.weixin.qq.com/pay/downloadbill"
 #define ALI_DOWNLOAD_METHOD   "alipay.data.dataservice.bill.downloadurl.query"
+
+#define SQL_TRY_BEG() try {
+#define SQL_TRY_END() }catch(CTrsExp& e){\
+    m_jsonRsp[JsonType("error")] = JsonType("1");\
+    m_jsonRsp[JsonType("msg")] = JsonType(e.retmsg);\
+    CERROR_LOG("mysql Execute occurs CTrsExp exception, err_code:%s,err_msg:%s", e.retcode.c_str(), e.retmsg.c_str());\
+    return;\
+}catch(...){\
+    m_jsonRsp[JsonType("error")] = JsonType("2");\
+    m_jsonRsp[JsonType("msg")] = JsonType("bill db ... error");\
+    CERROR_LOG("mysql Execute occurs ...exception");\
+    return;\
+}\
 
 /** STL map default sort order by key **/
 typedef std::map<std::string, std::string> StringMap;
@@ -489,7 +504,7 @@ typedef struct _tagTRemitBill
 	int             iIndex;
 	std::string		account_id;
 	int			    remit_fee;
-	float           fremit_fee;
+	std::string     sRemitfee;
 	std::string		sType;
 	std::string		sBankCardNo;
 	std::string		sBankOwner;
@@ -499,28 +514,33 @@ typedef struct _tagTRemitBill
 	std::string		sName;
 	std::string		sPayTime;
 	std::string		sRemitTime;
+	std::string     sRetCode;
 	std::string     sRemark;
 	std::string     sPayRemark;
 	std::string     sShopName;  //商户名称
 	std::string     sCycle;  //结算周期
+	std::string     sBankFlag;   //本行跨行标识
 
 	void Reset()
 	{
 		iIndex = 0;
 		account_id = "";
 		remit_fee = 0;
-		fremit_fee = 0.00;
+		sRemitfee = "";
 		sType = "";
 		sBankCardNo = "";
 		sBankOwner = "";
 		sBankCardType = "";
+		sBankType = "";
 		sName = "";
 		sPayTime = "";
 		sRemitTime = "";
+		sRetCode = "";
 		sRemark = "";
 		sPayRemark = "";
 		sShopName = "";
 		sCycle = "";
+		sBankFlag = "";
 	}
 }TRemitBill;
 
@@ -645,7 +665,6 @@ typedef struct _tagAliFlowSummary
 
 typedef struct _ApayBillSrvMainConf
 {
-	// 远程FTP 信息
 	string 		sFtpIp;
 	string 		sFtpUser;
 	string 		sFtpPass;
@@ -658,6 +677,126 @@ typedef struct _ApayBillSrvMainConf
 
 }ApayBillSrvMainConf;
 
+//hawrk 当日成功的对账单字段
+typedef struct _CheckedBillData
+{
+	string bm_id;
+	string pay_time;
+	string order_no;
+	string out_order_no;
+	string transaction_id;
+	string mch_id;
+	string channel_id;
+	string pay_channel;
+	string trade_type;
+	string order_status;
+	string total_fee;
+	string total_commission;
+	string shop_amount;
+	string refund_fee;
+	string refund_no;
+	string out_refund_no;
+	string refund_id;
+	string payment_profit;
+	string channel_profit;
+	string bm_profit;
+	string service_profit;
+	string sub_body;
+
+	void Reset()
+	{
+		bm_id = "";
+		pay_time = "";
+		order_no = "";
+		out_order_no = "";
+		transaction_id = "";
+		mch_id = "";
+		channel_id = "";
+		pay_channel = "";
+		trade_type = "";
+		order_status = "";
+		total_fee = "";
+		total_commission = "";
+		shop_amount = "";
+		refund_fee = "";
+		refund_no = "";
+		out_refund_no = "";
+		refund_id = "";
+		payment_profit = "";
+		channel_profit = "";
+		bm_profit = "";
+		service_profit = "";
+		sub_body = "";
+	}
+}CheckedBillData;
+
+
+struct DistriBillOverview
+{
+	char beg_date[16];
+	char end_date[16];
+	char bm_id[64];
+	void Reset()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+};
+
+struct stDistriBillP
+{
+	string beg_date;
+	string end_date;
+	string bm_id;
+	string pay_channel;
+	string mch_id;
+	string mch_name;
+	int type;
+	string shared_type;
+
+	int page;
+	int page_count;
+	void Reset()
+	{
+		beg_date = "";
+		end_date = "";
+		bm_id = "";
+		pay_channel = "";
+		mch_id = "";
+		mch_name = "";
+		type = 0;
+		page = 0;
+		page_count = 0;
+	}
+};
+
+struct DistriBillDetail
+{
+	string beg_date;
+	string end_date;
+	string bm_id;
+	string pay_channel;
+	string bank_acount;
+	string net_no;
+	string mch_id;
+	string mch_name;
+	int type;
+	int page;
+	int page_count;
+	void Reset()
+	{
+		beg_date = "";
+		end_date = "";
+		bm_id = "";
+		pay_channel = "";
+		bank_acount = "";
+		net_no = "";
+		mch_id = "";
+		mch_name = "";
+		type = 0;
+		page = 0;
+		page_count = 0;
+	}
+};
 
 #endif
 

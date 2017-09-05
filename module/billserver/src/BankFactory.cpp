@@ -25,7 +25,15 @@ CBillContrastBase* CBankFactory::CreateBankFactory(const std::string& bank_type)
 		return new CBillContrastABC();
 	}
 #else
-	if(bank_type == "tarbc")
+	if(bank_type == "ABC")  //农行
+	{
+		return new CBillContrastCommon();
+	}
+	if(bank_type == "sdtarcb")
+	{
+		return new CBillContrastCommon();
+	}
+	if(bank_type == "FJHXB")
 	{
 		return new CBillContrastCommon();
 	}

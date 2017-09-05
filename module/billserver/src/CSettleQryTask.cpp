@@ -108,13 +108,14 @@ void CSettleQryTask::CheckInput()
 {
 	CDEBUG_LOG("Begin ...");
 
-	if(m_InParams["ver"].empty() || m_InParams["ver"] != "1.0")
+	if(m_InParams["ver"].empty() || m_InParams["ver"] != VERSION)
 	{
 		CERROR_LOG("ver param[%s] is invalid!",m_InParams["ver"].c_str());
 		throw(CTrsExp(ERR_INVALID_PARAMS,"ver param invalid!"));
 	}
 
 	Check::CheckStrParam("cmd", m_InParams["cmd"], 1, 10, true);
+	Check::CheckStrParam("bm_id", m_InParams["bm_id"], 1, 20, true);
 	Check::CheckDigitalParam("oper_type", m_InParams["oper_type"], 1, 10, true);
 	Check::CheckPage(m_InParams["page"]);
 	Check::CheckLimit(m_InParams["limit"]);
@@ -239,6 +240,10 @@ void CSettleQryTask::QryMchSettleList()
 	int iPageNum  = STOI(m_InParams["page"].c_str());
     int iCnt      = (iPageNum-1)*iPageSize;
 
+	if ( !m_InParams["bm_id"].empty() )
+	{
+		ssConds << " and bm_id = '" << CMySQL::EscapeStr(m_InParams["bm_id"]) << "'";
+	}
 	if ( !m_InParams["partner_id"].empty() )
 	{
 		ssConds << " and partner_id = '" << CMySQL::EscapeStr(m_InParams["partner_id"]) << "'";
@@ -357,7 +362,11 @@ void CSettleQryTask::QrySettleErrorList()
 	int iPageSize = STOI(m_InParams["limit"].c_str());
 	int iPageNum  = STOI(m_InParams["page"].c_str());
     int iCnt      = (iPageNum-1)*iPageSize;
-	
+
+	if ( !m_InParams["bm_id"].empty() )
+	{
+		ssConds << " and bm_id = '" << CMySQL::EscapeStr(m_InParams["bm_id"]) << "'";
+	}
 	if ( !m_InParams["partner_id"].empty() )
 	{
 		ssConds << " and partner_id = '" << CMySQL::EscapeStr(m_InParams["partner_id"]) << "'";
@@ -478,7 +487,11 @@ void CSettleQryTask::QrySettleOnAccountList()
 	int iPageSize = STOI(m_InParams["limit"].c_str());
 	int iPageNum  = STOI(m_InParams["page"].c_str());
     int iCnt      = (iPageNum-1)*iPageSize;
-	
+
+	if ( !m_InParams["bm_id"].empty() )
+	{
+		ssConds << " and bm_id = '" << CMySQL::EscapeStr(m_InParams["bm_id"]) << "'";
+	}
 	if ( !m_InParams["partner_id"].empty() )
 	{
 		ssConds << " and partner_id = '" << CMySQL::EscapeStr(m_InParams["partner_id"]) << "'";
@@ -600,6 +613,10 @@ void CSettleQryTask::QryInstiSettleList()
 	int iPageNum  = STOI(m_InParams["page"].c_str());
     int iCnt      = (iPageNum-1)*iPageSize;
 
+	if ( !m_InParams["bm_id"].empty() )
+	{
+		ssConds << " and bm_id = '" << CMySQL::EscapeStr(m_InParams["bm_id"]) << "'";
+	}
 	if ( !m_InParams["partner_id"].empty() )
 	{
 		ssConds << " and partner_id = '" << CMySQL::EscapeStr(m_InParams["partner_id"]) << "'";

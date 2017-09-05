@@ -133,7 +133,7 @@ int CPayTransactionFlowDao::GetOrderTableFlowDataSql(clib_mysql& sql_instance,
 		" mch_id, channel_id, order_no, out_trade_no,"
 		" pay_channel, transaction_id, trade_type, total_fee,"
 		" refund_fee, order_status, shop_amount, payment_profit,"
-		" channel_profit, service_profit, bm_profit, total_commission, pay_time"
+		" channel_profit, service_profit, bm_profit, total_commission, pay_time,"
 		" fee_type,sub_body,shop_calc_rate "
 		" FROM %s "
 		" WHERE "
@@ -442,9 +442,9 @@ INT32 CPayTransactionFlowDao::InsertPayIdenticalWxToDB(clib_mysql& sql_instance,
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
 		" insert into bill_db.t_bill_success_flow (bm_id,pay_time, order_no, out_order_no, transaction_id, mch_id, channel_id, pay_channel, trade_type, order_status, total_fee, total_commission, shop_amount, "
-		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit, bill_status,settle_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
+		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit,sub_body, bill_status,settle_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
 		" shop.mch_id, shop.channel_id, shop.pay_channel, shop.trade_type, shop.order_status, shop.total_fee, shop.total_commission, shop.shop_amount, shop.refund_fee, shop.refund_no, shop.out_refund_no,  " 
-		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit, shop.bill_status,1 from bill_db.t_wxpay_flow as wx inner JOIN  bill_db.t_order_wxpay_flow as shop "
+		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit,shop.sub_body, shop.bill_status,1 from bill_db.t_wxpay_flow as wx inner JOIN  bill_db.t_order_wxpay_flow as shop "
 		" on shop.bm_id = wx.bm_id and shop.order_no = wx.order_no  and (wx.total_fee * 100) = shop.total_fee and shop.order_status = wx.order_status "
 		" where shop.bm_id = '%s' and shop.pay_time >= '%s' and shop.pay_time <= '%s' and shop.order_status = 'SUCCESS' ",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
@@ -479,9 +479,9 @@ INT32 CPayTransactionFlowDao::InsertRefundIdenticalWxToDB(clib_mysql& sql_instan
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
 		" insert into bill_db.t_bill_success_flow (bm_id,pay_time, order_no, out_order_no, transaction_id, mch_id, channel_id, pay_channel, trade_type, order_status, total_fee, total_commission, shop_amount, "
-		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit, bill_status,settle_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
+		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit,sub_body, bill_status,settle_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
 		" shop.mch_id, shop.channel_id, shop.pay_channel, shop.trade_type, shop.order_status, shop.total_fee, shop.total_commission, shop.shop_amount, shop.refund_fee, shop.refund_no, shop.out_refund_no, "
-		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit, shop.bill_status,1 from bill_db.t_wxpay_flow as wx inner JOIN  bill_db.t_order_wxpay_flow as shop "
+		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit, shop.sub_body,shop.bill_status,1 from bill_db.t_wxpay_flow as wx inner JOIN  bill_db.t_order_wxpay_flow as shop "
 		" on shop.bm_id = wx.bm_id and shop.order_no = wx.order_no and (wx.refund_fee * 100) = shop.refund_fee and shop.order_status = wx.order_status AND shop.refund_no = wx.refund_no"
 		" where shop.bm_id = '%s' and shop.pay_time >= '%s' and shop.pay_time <= '%s' and shop.order_status = 'REFUND' ",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
@@ -503,6 +503,135 @@ INT32 CPayTransactionFlowDao::InsertRefundIdenticalWxToDB(clib_mysql& sql_instan
 	return sql_instance.affected_rows();
 }
 
+//金额不符
+INT32 CPayTransactionFlowDao::InsertAmountNotMatchToDB(clib_mysql& sql_instance,
+					const std::string& strBmId, const std::string& strPayChannel,
+					const std::string& strBillDate,const std::string& strBatchNo,
+					const std::string& strBeginTime, const std::string& strEndTime)
+{
+	int iRet = 0;
+
+	Reset();
+
+	ostringstream sqlss;
+
+	if(strPayChannel == "WXPAY")
+	{
+	    sqlss.str("");
+	    sqlss << "insert into "
+	    	  <<BILL_DB<<"."<<BILL_ABNORMAL
+			  <<" (bm_id,bill_date, bill_batch_no, pay_channel, cur_type, mch_id, "
+			  <<" pf_trade_amount, pf_order_no, ch_trade_amount, ch_order_no, trade_date, abnormal_type, porcess_status)"
+			  <<" select shop.bm_id,'"<<strBillDate<<"','"<<strBatchNo<<"',shop.pay_channel,'CNY',shop.mch_id,"
+			  <<" shop.total_fee,shop.order_no,(ch.total_fee)*100,ch.order_no,shop.pay_time,'4','0' "
+			  <<" from "<<BILL_DB<<"."<<BILL_WXPAY_FLOW<<" as ch INNER JOIN "<<BILL_DB<<"."<<ORDER_WXPAY_FLOW
+			  <<" as shop ON shop.bm_id = ch.bm_id AND shop.order_no = ch.order_no AND (ch.total_fee * 100) <> shop.total_fee"
+			  <<" AND shop.order_status = ch.order_status WHERE shop.bm_id = '"<<strBmId<<"' AND shop.pay_time >= '"<<strBeginTime
+			  <<"' AND shop.pay_time <= '"<<strEndTime<<"' AND shop.order_status = 'SUCCESS'";
+
+
+		CDEBUG_LOG(" CPayTransactionFlowDao::InsertAmountNotMatchToDB success :sql_stmt:[%s].", sqlss.str().c_str());
+		iRet = sql_instance.query(sqlss.str().c_str());
+		if (iRet != 0)
+		{
+			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+				"InsertAmountNotMatchToDB Execute"
+				"Failed.Ret[%d] Err[%u~%s]",
+				iRet,
+				sql_instance.get_errno(),
+				sql_instance.get_error());
+			return -20;
+		}
+
+		//退款
+	    sqlss.str("");
+	    sqlss << "insert into "
+	    	  <<BILL_DB<<"."<<BILL_ABNORMAL
+			  <<" (bm_id,bill_date, bill_batch_no, pay_channel, cur_type, mch_id, "
+			  <<" pf_refund_amount, pf_refund_no, ch_refund_amount, ch_refund_no, trade_date, abnormal_type, porcess_status)"
+			  <<" select shop.bm_id,'"<<strBillDate<<"','"<<strBatchNo<<"',shop.pay_channel,ch.fee_type,shop.mch_id,"
+			  <<" shop.refund_fee,shop.refund_no,(ch.refund_fee)*100,ch.refund_no,shop.pay_time,'4','0' "
+			  <<" from "<<BILL_DB<<"."<<BILL_WXPAY_FLOW<<" as ch INNER JOIN "<<BILL_DB<<"."<<ORDER_WXPAY_FLOW
+			  <<" as shop ON shop.bm_id = ch.bm_id AND shop.order_no = ch.order_no AND (ch.refund_fee * 100) <> shop.refund_fee"
+			  <<" AND shop.order_status = ch.order_status AND shop.refund_no = ch.refund_no WHERE shop.bm_id = '"<<strBmId
+			  <<"' AND shop.pay_time >= '"<<strBeginTime<<"' AND shop.pay_time <= '"<<strEndTime
+			  <<"' AND shop.order_status = 'REFUND'";
+
+		CDEBUG_LOG(" CPayTransactionFlowDao::InsertAmountNotMatchToDB refund :sql_stmt:[%s].", sqlss.str().c_str());
+		iRet = sql_instance.query(sqlss.str().c_str());
+		if (iRet != 0)
+		{
+			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+				"InsertAmountNotMatchToDB Execute"
+				"Failed.Ret[%d] Err[%u~%s]",
+				iRet,
+				sql_instance.get_errno(),
+				sql_instance.get_error());
+			return -20;
+		}
+
+	}
+	else if(strPayChannel == "ALIPAY")
+	{
+	    sqlss.str("");
+	    sqlss << "insert into "
+	    	  <<BILL_DB<<"."<<BILL_ABNORMAL
+			  <<" (bm_id,bill_date, bill_batch_no, pay_channel, cur_type, mch_id, "
+			  <<" pf_trade_amount, pf_order_no, ch_trade_amount, ch_order_no, trade_date, abnormal_type, porcess_status)"
+			  <<" select shop.bm_id,'"<<strBillDate<<"','"<<strBatchNo<<"',shop.pay_channel,'CNY',shop.mch_id,"
+			  <<" shop.total_fee,shop.order_no,(ch.total_fee)*100,ch.order_no,shop.pay_time,'4','0' "
+			  <<" from "<<BILL_DB<<"."<<BILL_ALIPAY_FLOW<<" as ch INNER JOIN "<<BILL_DB<<"."<<ORDER_ALIPAY_FLOW
+			  <<" as shop ON shop.bm_id = ch.bm_id AND shop.order_no = ch.order_no AND (ch.total_fee * 100) <> shop.total_fee"
+			  <<" AND shop.order_status = ch.order_status WHERE shop.bm_id = '"<<strBmId<<"' AND shop.pay_time >= '"<<strBeginTime
+			  <<"' AND shop.pay_time <= '"<<strEndTime<<"' AND shop.order_status = 'SUCCESS'";
+
+
+		CDEBUG_LOG(" CPayTransactionFlowDao::InsertAmountNotMatchToDB success :sql_stmt:[%s].", sqlss.str().c_str());
+		iRet = sql_instance.query(sqlss.str().c_str());
+		if (iRet != 0)
+		{
+			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+				"InsertAmountNotMatchToDB Execute"
+				"Failed.Ret[%d] Err[%u~%s]",
+				iRet,
+				sql_instance.get_errno(),
+				sql_instance.get_error());
+			return -20;
+		}
+
+		//退款
+	    sqlss.str("");
+	    sqlss << "insert into "
+	    	  <<BILL_DB<<"."<<BILL_ABNORMAL
+			  <<" (bm_id,bill_date, bill_batch_no, pay_channel, cur_type, mch_id, "
+			  <<" pf_refund_amount, pf_refund_no, ch_refund_amount, ch_refund_no, trade_date, abnormal_type, porcess_status)"
+			  <<" select shop.bm_id,'"<<strBillDate<<"','"<<strBatchNo<<"',shop.pay_channel,'CNY',shop.mch_id,"
+			  <<" shop.refund_fee,shop.refund_no,(ch.total_fee)*100,ch.refund_no,shop.pay_time,'4','0' "
+			  <<" from "<<BILL_DB<<"."<<BILL_ALIPAY_FLOW<<" as ch INNER JOIN "<<BILL_DB<<"."<<ORDER_ALIPAY_FLOW
+			  <<" as shop ON shop.bm_id = ch.bm_id AND shop.order_no = ch.order_no AND (ch.total_fee * 100) <> shop.refund_fee"
+			  <<" AND shop.order_status = ch.order_status AND shop.refund_no = ch.refund_no WHERE shop.bm_id = '"<<strBmId
+			  <<"' AND shop.pay_time >= '"<<strBeginTime<<"' AND shop.pay_time <= '"<<strEndTime
+			  <<"' AND shop.order_status = 'REFUND'";
+
+		CDEBUG_LOG(" CPayTransactionFlowDao::InsertAmountNotMatchToDB refund :sql_stmt:[%s].", sqlss.str().c_str());
+		iRet = sql_instance.query(sqlss.str().c_str());
+		if (iRet != 0)
+		{
+			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+				"InsertAmountNotMatchToDB Execute"
+				"Failed.Ret[%d] Err[%u~%s]",
+				iRet,
+				sql_instance.get_errno(),
+				sql_instance.get_error());
+			return -20;
+		}
+	}
+
+	sql_instance.free_result();
+
+	return sql_instance.affected_rows();
+}
+
 //distinct
 INT32 CPayTransactionFlowDao::InsertPayDistinctWxToDB(clib_mysql& sql_instance, const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime)
 {
@@ -518,7 +647,7 @@ INT32 CPayTransactionFlowDao::InsertPayDistinctWxToDB(clib_mysql& sql_instance, 
 		" insert into bill_db.t_wx_overflow (bm_id,pay_time, app_id, mch_id, sub_mch_id, device_info, transaction_id, order_no, openid, trade_type, order_status, bank_type, fee_type, total_fee, red_amount, refund_id, refund_no, "
 		" refund_fee, red_refund_amount, refund_type, refund_status, goods_name, shop_packet, counter_fee, rate,overflow_type) SELECT wx.bm_id,wx.pay_time, wx.app_id, wx.mch_id, wx.sub_mch_id, wx.device_info, wx.transaction_id, wx.order_no,"
 		" wx.openid, wx.trade_type, wx.order_status, wx.bank_type, wx.fee_type, wx.total_fee*100, wx.red_amount*100, wx.refund_id, wx.refund_no,  wx.refund_fee*100, wx.red_refund_amount*100, wx.refund_type, wx.refund_status, wx.goods_name, "
-		" wx.shop_packet, wx.counter_fee*100, wx.rate ,'2' FROM bill_db.t_wxpay_flow AS wx LEFT JOIN  bill_db.t_order_wxpay_flow AS shop ON shop.bm_id = wx.bm_id and shop.order_no = wx.order_no AND (wx.total_fee * 100) = shop.total_fee "
+		" wx.shop_packet, wx.counter_fee*100, wx.rate ,'2' FROM bill_db.t_wxpay_flow AS wx LEFT JOIN  bill_db.t_order_wxpay_flow AS shop ON shop.bm_id = wx.bm_id and shop.order_no = wx.order_no  "
 		" AND shop.order_status = wx.order_status WHERE  wx.bm_id = '%s' and wx.pay_time >= '%s' AND wx.pay_time <= '%s' AND wx.order_status = 'SUCCESS' AND shop.order_no IS NULL",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
 
@@ -569,7 +698,7 @@ INT32 CPayTransactionFlowDao::InsertPaySuccessToDB(clib_mysql& sql_instance, con
 		"shop.trade_type,shop.order_status,shop.total_fee,shop.refund_id,shop.refund_no,"
 		"shop.refund_fee,'1' FROM bill_db.%s AS shop "
 		"LEFT JOIN bill_db.%s AS wx  ON shop.bm_id = wx.bm_id "
-		"AND shop.order_no = wx.order_no AND (wx.total_fee * 100) = shop.total_fee "
+		"AND shop.order_no = wx.order_no "
 		"AND shop.order_status = wx.order_status WHERE shop.bm_id = '%s'"
 		"AND shop.pay_time >= '%s' "
 		"AND shop.pay_time <= '%s' "
@@ -577,6 +706,8 @@ INT32 CPayTransactionFlowDao::InsertPaySuccessToDB(clib_mysql& sql_instance, con
 		"AND wx.order_no IS NULL",
 		overflow_table.c_str(),order_flow_table.c_str(),channel_flow.c_str(),
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	// AND (wx.total_fee * 100) = shop.total_fee
 
 	CDEBUG_LOG(" CPayTransactionFlowDao::InsertPayDistinctWxToDB:sql_stmt:[%s].", sql_stmt);
 	iRet = sql_instance.query(sql_stmt);
@@ -626,7 +757,7 @@ INT32 CPayTransactionFlowDao::InsertPayRefundToDB(clib_mysql& sql_instance, cons
 		"shop.trade_type,shop.order_status,shop.total_fee,shop.refund_id,shop.refund_no,"
 		"shop.refund_fee,'1' FROM bill_db.%s AS shop "
 		"LEFT JOIN bill_db.%s AS wx  ON shop.bm_id = wx.bm_id "
-		"AND shop.order_no = wx.order_no AND (wx.refund_fee * 100) = shop.refund_fee "
+		"AND shop.order_no = wx.order_no  "
 		"AND shop.order_status = wx.order_status AND shop.refund_no = wx.refund_no "
 		"WHERE shop.bm_id = '%s'"
 		"AND shop.pay_time >= '%s' "
@@ -635,6 +766,8 @@ INT32 CPayTransactionFlowDao::InsertPayRefundToDB(clib_mysql& sql_instance, cons
 		"AND wx.order_no IS NULL",
 		overflow_table.c_str(),order_flow_table.c_str(),channel_flow.c_str(),
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	//AND (wx.refund_fee * 100) = shop.refund_fee
 
 	CDEBUG_LOG(" CPayTransactionFlowDao::InsertPayRefundToDB:sql_stmt:[%s].", sql_stmt);
 	iRet = sql_instance.query(sql_stmt);
@@ -669,9 +802,11 @@ INT32 CPayTransactionFlowDao::InsertRefundDistinctWxToDB(clib_mysql& sql_instanc
 		" insert into bill_db.t_wx_overflow (bm_id,pay_time, app_id, mch_id, sub_mch_id, device_info, transaction_id, order_no, openid, trade_type, order_status, bank_type, fee_type, total_fee, red_amount, refund_id, refund_no, "
 		" refund_fee, red_refund_amount, refund_type, refund_status, goods_name, shop_packet, counter_fee, rate,overflow_type) SELECT wx.bm_id,wx.pay_time, wx.app_id, wx.mch_id, wx.sub_mch_id, wx.device_info, wx.transaction_id, wx.order_no,"
 		" wx.openid, wx.trade_type, wx.order_status, wx.bank_type, wx.fee_type, wx.total_fee, wx.red_amount, wx.refund_id, wx.refund_no,  wx.refund_fee, wx.red_refund_amount, wx.refund_type, wx.refund_status, wx.goods_name, "
-		" wx.shop_packet, wx.counter_fee, wx.rate,'2' FROM bill_db.t_wxpay_flow AS wx LEFT JOIN  bill_db.t_order_wxpay_flow AS shop ON shop.bm_id = wx.bm_id and shop.order_no = wx.order_no AND (wx.refund_fee * 100) = shop.refund_fee "
+		" wx.shop_packet, wx.counter_fee, wx.rate,'2' FROM bill_db.t_wxpay_flow AS wx LEFT JOIN  bill_db.t_order_wxpay_flow AS shop ON shop.bm_id = wx.bm_id and shop.order_no = wx.order_no  "
 		" AND shop.order_status = wx.order_status AND shop.refund_no = wx.refund_no WHERE wx.bm_id = '%s' and wx.pay_time >= '%s' AND wx.pay_time <= '%s' AND wx.order_status = 'REFUND' AND shop.order_no IS NULL",
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());
+
+	//AND (wx.refund_fee * 100) = shop.refund_fee
 
 	CDEBUG_LOG(" CPayTransactionFlowDao::InsertRefundDistinctWxToDB:sql_stmt:[%s].", sql_stmt);
 	iRet = sql_instance.query(sql_stmt);
@@ -688,6 +823,86 @@ INT32 CPayTransactionFlowDao::InsertRefundDistinctWxToDB(clib_mysql& sql_instanc
 	sql_instance.free_result();
 
 	return sql_instance.affected_rows();
+}
+
+int CPayTransactionFlowDao::GetCheckedBillData(clib_mysql& sql_instance,const std::string& strBmId, const std::string strChannel,
+					const std::string& strBeginTime, const std::string& strEndTime,std::vector<CheckedBillData>& vecbilldata)
+{
+	BEGIN_LOG(__func__);
+
+	int iRet = 0;
+	MYSQL_ROW row;
+
+	Reset();
+
+	char sql_stmt[4096];
+
+	snprintf(sql_stmt, sizeof(sql_stmt),
+		" select bm_id,pay_time,order_no,out_order_no,transaction_id,mch_id,channel_id,pay_channel,"
+		"trade_type, order_status,total_fee,total_commission,shop_amount,"
+		" refund_fee,refund_no, out_refund_no,refund_id,payment_profit,channel_profit,bm_profit,service_profit,sub_body"
+		" from bill_db.t_bill_success_flow where bm_id = '%s' and pay_time >= '%s'  AND  pay_time <= '%s' and pay_channel = '%s'",
+		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str(),strChannel.c_str());
+
+	CDEBUG_LOG("GetCheckedBillData sql: %s", sql_stmt);
+
+	iRet = sql_instance.query(sql_stmt);
+
+	if (iRet != 0)
+	{
+		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+			"GetPayBillData Execute Failed.Ret[%d] Err[%u~%s]",
+			iRet, sql_instance.get_errno(), sql_instance.get_error());
+		return -20;
+	}
+
+	if (sql_instance.num_rows() <= 0)
+	{
+		// 数据不存在
+		return RET_HASNOREC;
+	}
+
+	for (int i = 0; i < sql_instance.num_rows(); i++)
+	{
+		CheckedBillData billdata;
+		billdata.Reset();
+		if ((row = sql_instance.fetch_row()))
+		{
+			billdata.bm_id = (row[0]) ? row[0] : "";
+			billdata.pay_time = (row[1]) ? row[1] : "";
+			billdata.order_no = (row[2]) ? row[2] : "";
+			billdata.out_order_no = (row[3]) ? row[3] : "";
+			billdata.transaction_id = (row[4]) ? row[4] : "";
+			billdata.mch_id = (row[5]) ? row[5] : "";
+			billdata.channel_id = (row[6]) ? row[6] : "";
+			billdata.pay_channel = (row[7]) ? row[7] : "";
+			billdata.trade_type = (row[8]) ? row[8] : "";
+			billdata.order_status = (row[9]) ? row[9] : "";
+			billdata.total_fee = (row[10]) ? row[10] : "";
+			billdata.total_commission = (row[11]) ? row[11] : "";
+			billdata.shop_amount = (row[12]) ? row[12] : "";
+			billdata.refund_fee = (row[13]) ? row[13] : "";
+			billdata.refund_no = (row[14]) ? row[14] : "";
+			billdata.out_refund_no = (row[15]) ? row[15] : "";
+			billdata.refund_id = (row[16]) ? row[16] : "";
+			billdata.payment_profit = (row[17]) ? row[17] : "";
+			billdata.channel_profit = (row[18]) ? row[18] : "";
+			billdata.bm_profit = (row[19]) ? row[19] : "";
+			billdata.service_profit = (row[20]) ? row[20] : "";
+			billdata.sub_body = (row[21]) ? row[21] : "";
+
+			vecbilldata.push_back(billdata);
+		}
+		else
+		{
+			snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+				"FetchRow Failed.Ret[%d] Err[%u~%s]",
+				iRet, sql_instance.get_errno(), sql_instance.get_error());
+			return -30;
+		}
+	}
+	sql_instance.free_result();
+	return RET_HASREC;
 }
 
 
@@ -890,20 +1105,20 @@ int CPayTransactionFlowDao::GetChannelBillData(clib_mysql& sql_instance, const s
 }
 
 INT32 CPayTransactionFlowDao::InsertDistributionDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
-						const std::string& pay_channel,OrderStat& ordStat,const char* fund_type)
+						const std::string& pay_channel,const std::string& channel_code,OrderStat& ordStat,TRemitBill& remitBill,const char* fund_type)
 {
 	int iRet = 0;
 	ostringstream sqlss;
     sqlss.str("");
     sqlss << "insert into "
     	  <<BILL_DB<<"."<<BILL_DISTRIBUTION
-		  <<" (bm_id,bill_date,bill_batch_no,mch_id,pay_channel,trade_count,trade_amount,refund_count,"
-		  <<"refund_amount,profit,unsettle,share_profit,fund_type)"
-		  <<" values('"<<strBmId<<"','"<<bill_date<<"','"<<batch_no<<"','"<<ordStat.mch_id<<"','"<<pay_channel<<"','"
+		  <<" (bm_id,bill_date,bill_batch_no,mch_id,mch_name,pay_channel,trade_count,trade_amount,refund_count,"
+		  <<"refund_amount,cost_fee,profit,unsettle,share_profit,fund_type,org_id)"
+		  <<" values('"<<strBmId<<"','"<<bill_date<<"','"<<batch_no<<"','"<<ordStat.mch_id<<"','"<<remitBill.sShopName<<"','"<<pay_channel<<"','"
 		  <<ordStat.trade_count<<"','"<<ordStat.trade_amount<<"','"
-		  <<ordStat.refund_count<<"','"<<ordStat.refund_amount<<"','"
+		  <<ordStat.refund_count<<"','"<<ordStat.refund_amount<<"','"<<ordStat.payment_net_profit<<"','"
 		  <<ordStat.trade_net_amount<<"','"<<ordStat.shop_net_amount<<"','"
-		  <<ordStat.shared_profit<<"','"<<fund_type<<"');";
+		  <<ordStat.shared_profit<<"','"<<fund_type<<"','"<<channel_code<<"');";
 
 	CDEBUG_LOG(" CPayTransactionFlowDao::InsertDistributionDB:sql_stmt:[%s].", sqlss.str().c_str());
 	iRet = sql_instance.query(sqlss.str().c_str());
@@ -930,10 +1145,10 @@ INT32 CPayTransactionFlowDao::InsertSettleDB(clib_mysql& sql_instance,const std:
     sqlss.str("");
     sqlss << "insert into "
     	  <<BILL_DB<<"."<<BILL_SETTLE
-		  <<" (bm_id,bill_date,batch_no,card_type,card_name,bank_cardno,bank_type,bank_inscode,fund_type,"
+		  <<" (bm_id,bill_date,batch_no,card_type,card_name,bank_cardno,bank_type,bank_flag,bank_inscode,fund_type,"
 		  <<"partner_id,partner_name,pay_channel,settle_amt,settle_status)"
 		  <<" values('"<<strBmId<<"','"<<bill_date<<"','"<<batch_no<<"','"<<remitBill.sBankCardType<<"','"<<remitBill.sName<<"','"
-		  <<remitBill.sBankCardNo<<"','"<<remitBill.sBankType<<"','"
+		  <<remitBill.sBankCardNo<<"','"<<remitBill.sBankType<<"','"<<remitBill.sBankFlag<<"','"
 		  <<remitBill.sBranchNo<<"','"<<remitBill.sType<<"','"
 		  <<remitBill.account_id<<"','"<<remitBill.sShopName<<"','"
 		  <<pay_channel<<"','"<<remitBill.remit_fee<<"',1);";
@@ -1326,7 +1541,7 @@ INT32 CPayTransactionFlowDao::InsertSummaryDB(clib_mysql& sql_instance,const std
 
 	//平台成功
     sqlss.str("");
-    sqlss << "select bm_id,pay_channel,count(*) as pf_count,sum(total_fee) as pf_amount,sum(total_commission) as pf_fee"
+    sqlss << "select bm_id,pay_channel,count(*) as pf_count,sum(total_fee) as pf_amount,sum(payment_profit) as pf_fee"
           <<" from "<<BILL_DB<<"."<<order_flow_db
 		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
 		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'SUCCESS'";
@@ -1358,7 +1573,7 @@ INT32 CPayTransactionFlowDao::InsertSummaryDB(clib_mysql& sql_instance,const std
 
 	//平台退款
     sqlss.str("");
-    sqlss << "select count(*) as pf_ref_count,sum(refund_fee) as pf_ref_amount ,sum(total_commission) as pf_ref_fee"
+    sqlss << "select count(*) as pf_ref_count,sum(refund_fee) as pf_ref_amount ,sum(payment_profit) as pf_ref_fee"
           <<" from "<<BILL_DB<<"."<<order_flow_db
 		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
 		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'REFUND'";
@@ -1388,67 +1603,130 @@ INT32 CPayTransactionFlowDao::InsertSummaryDB(clib_mysql& sql_instance,const std
 
 	//渠道成功
     sqlss.str("");
-    sqlss << "select mch_id,fee_type,count(*) as ch_count,sum(total_fee *100) as ch_amount,sum(counter_fee*100) as ch_fee"
-          <<" from "<<BILL_DB<<"."<<channel_flow_db
-		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
-		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'SUCCESS'";
+    if(strcmp(pay_channel,"WXPAY") == 0)
+    {
+        sqlss << "select mch_id,fee_type,count(*) as ch_count,sum(total_fee *100) as ch_amount,sum(counter_fee*100) as ch_fee"
+              <<" from "<<BILL_DB<<"."<<channel_flow_db
+    		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
+    		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'SUCCESS'";
+    	CDEBUG_LOG("ch success InsertSummaryDB sql: %s", sqlss.str().c_str());
+    	iRet = sql_instance.query(sqlss.str().c_str());
+    	if (iRet != 0)
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"GetOrderRefundChannelTableFlowDataSql Execute Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -20;
+    	}
+    	if ((row = sql_instance.fetch_row()))
+    	{
+    		summary_map["mch_id"] = (row[0])?row[0]:"";
+    		summary_map["fee_type"] = (row[1])?row[1]:"";
+    		summary_map["ch_count"] = (row[2])?row[2]:"0";
+    		summary_map["ch_amount"] = (row[3])?row[3]:"0";
+    		summary_map["ch_fee"] = (row[4])?row[4]:"0";
+    	}
+    	else
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"FetchRow Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -30;
+    	}
 
-	CDEBUG_LOG("ch success InsertSummaryDB sql: %s", sqlss.str().c_str());
-	iRet = sql_instance.query(sqlss.str().c_str());
-	if (iRet != 0)
-	{
-		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"GetOrderRefundChannelTableFlowDataSql Execute Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-		return -20;
-	}
-	if ((row = sql_instance.fetch_row()))
-	{
-		summary_map["mch_id"] = (row[0])?row[0]:"";
-		summary_map["fee_type"] = (row[1])?row[1]:"";
-		summary_map["ch_count"] = (row[2])?row[2]:"0";
-		summary_map["ch_amount"] = (row[3])?row[3]:"0";
-		summary_map["ch_fee"] = (row[4])?row[4]:"0";
-	}
-	else
-	{
-		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"FetchRow Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-		return -30;
-	}
+    	//渠道退款
+        sqlss.str("");
+        sqlss << "select count(*) as ch_ref_count,sum(refund_fee*100) as ch_ref_amount,sum(counter_fee*100) as ch_ref_fee"
+              <<" from "<<BILL_DB<<"."<<channel_flow_db
+    		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
+    		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'REFUND'";
 
-	//渠道退款
-    sqlss.str("");
-    sqlss << "select count(*) as ch_ref_count,sum(total_fee*100) as ch_ref_amount,sum(counter_fee*100) as ch_ref_fee"
-          <<" from "<<BILL_DB<<"."<<channel_flow_db
-		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
-		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'REFUND'";
+    	CDEBUG_LOG("pf refund InsertSummaryDB sql: %s", sqlss.str().c_str());
+    	iRet = sql_instance.query(sqlss.str().c_str());
+    	if (iRet != 0)
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"GetOrderRefundChannelTableFlowDataSql Execute Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -20;
+    	}
+    	if ((row = sql_instance.fetch_row()))
+    	{
+    		summary_map["ch_ref_count"] = (row[0])?row[0]:"0";
+    		summary_map["ch_ref_amount"] = (row[1])?row[1]:"0";
+    		summary_map["ch_ref_fee"] = (row[2])?row[2]:"0";
+    	}
+    	else
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"FetchRow Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -30;
+    	}
+    }
+    else
+    {
+        sqlss << "select mch_id,count(*) as ch_count,sum(total_fee *100) as ch_amount,sum(service_profit*100) as ch_fee"
+              <<" from "<<BILL_DB<<"."<<channel_flow_db
+    		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
+    		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'SUCCESS'";
+    	CDEBUG_LOG("ch success InsertSummaryDB sql: %s", sqlss.str().c_str());
+    	iRet = sql_instance.query(sqlss.str().c_str());
+    	if (iRet != 0)
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"GetOrderRefundChannelTableFlowDataSql Execute Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -20;
+    	}
+    	if ((row = sql_instance.fetch_row()))
+    	{
+    		summary_map["mch_id"] = (row[0])?row[0]:"";
+    		//summary_map["fee_type"] = (row[1])?row[1]:"";
+    		summary_map["ch_count"] = (row[1])?row[1]:"0";
+    		summary_map["ch_amount"] = (row[2])?row[2]:"0";
+    		summary_map["ch_fee"] = (row[3])?row[3]:"0";
+    	}
+    	else
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"FetchRow Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -30;
+    	}
 
-	CDEBUG_LOG("pf refund InsertSummaryDB sql: %s", sqlss.str().c_str());
-	iRet = sql_instance.query(sqlss.str().c_str());
-	if (iRet != 0)
-	{
-		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"GetOrderRefundChannelTableFlowDataSql Execute Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-		return -20;
-	}
-	if ((row = sql_instance.fetch_row()))
-	{
-		summary_map["ch_ref_count"] = (row[0])?row[0]:"0";
-		summary_map["ch_ref_amount"] = (row[1])?row[1]:"0";
-		summary_map["ch_ref_fee"] = (row[2])?row[2]:"0";
-	}
-	else
-	{
-		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
-			"FetchRow Failed.Ret[%d] Err[%u~%s]",
-			iRet, sql_instance.get_errno(), sql_instance.get_error());
-		return -30;
-	}
+    	//渠道退款
+        sqlss.str("");
+        sqlss << "select count(*) as ch_ref_count,sum(total_fee*100) as ch_ref_amount,sum(service_profit*100) as ch_ref_fee"
+              <<" from "<<BILL_DB<<"."<<channel_flow_db
+    		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime
+    		  <<"' and pay_time <= '"<<strEndTime<<"' and order_status = 'REFUND'";
 
-	//对账成功金额
+    	CDEBUG_LOG("pf refund InsertSummaryDB sql: %s", sqlss.str().c_str());
+    	iRet = sql_instance.query(sqlss.str().c_str());
+    	if (iRet != 0)
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"GetOrderRefundChannelTableFlowDataSql Execute Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -20;
+    	}
+    	if ((row = sql_instance.fetch_row()))
+    	{
+    		summary_map["ch_ref_count"] = (row[0])?row[0]:"0";
+    		summary_map["ch_ref_amount"] = (row[1])?row[1]:"0";
+    		summary_map["ch_ref_fee"] = (row[2])?row[2]:"0";
+    	}
+    	else
+    	{
+    		snprintf(m_szErrMsg, sizeof(m_szErrMsg),
+    			"FetchRow Failed.Ret[%d] Err[%u~%s]",
+    			iRet, sql_instance.get_errno(), sql_instance.get_error());
+    		return -30;
+    	}
+    }
+
+	//平账成功金额
     sqlss.str("");
     sqlss << "select sum(total_fee) as normal_total_amount  "
           <<" from "<<BILL_DB<<"."<<BILL_SUCC_FLOW
@@ -1476,9 +1754,9 @@ INT32 CPayTransactionFlowDao::InsertSummaryDB(clib_mysql& sql_instance,const std
 		return -30;
 	}
 
-	//对账退款金额
+	//平账退款金额
     sqlss.str("");
-    sqlss << "select sum(total_fee) as normal_refund_amount  "
+    sqlss << "select sum(refund_fee) as normal_refund_amount  "
           <<" from "<<BILL_DB<<"."<<BILL_SUCC_FLOW
 		  <<" where bm_id = '"<<strBmId<<"' and pay_time >= '"<<strBeginTime<<"' and pay_time <= '"<<strEndTime
 		  <<"' and pay_channel = '"<<pay_channel<<"' and order_status = 'REFUND'";
@@ -1503,14 +1781,16 @@ INT32 CPayTransactionFlowDao::InsertSummaryDB(clib_mysql& sql_instance,const std
 			iRet, sql_instance.get_errno(), sql_instance.get_error());
 		return -30;
 	}
-
 	//计算异常
 	//平台成功笔数 +平台退款笔数 — 渠道成功笔数 - 渠道退款笔数
-	int abnormal_cnt = abs(atoi(summary_map["pf_count"].c_str()) + atoi(summary_map["pf_ref_count"].c_str())
-			- atoi(summary_map["ch_count"].c_str()) - atoi(summary_map["ch_ref_count"].c_str()));
+	//平台成功  - 渠道成功   + 平台退款 - 渠道退款
+	int abnormal_cnt = abs(atoi(summary_map["pf_count"].c_str()) - atoi(summary_map["ch_count"].c_str()))
+					  + abs(atoi(summary_map["pf_ref_count"].c_str()) - atoi(summary_map["ch_ref_count"].c_str()));
+
 	//平台成功金额+平台退款金额-渠道成功金额-渠道退款金额
-	long abnormal_amount = abs(atol(summary_map["pf_amount"].c_str()) + atol(summary_map["pf_ref_amount"].c_str())
-			- atol(summary_map["ch_amount"].c_str()) - atol(summary_map["ch_ref_amount"].c_str()));
+	//平台成功 - 渠道成功   + 平台退款 - 渠道退款
+	long abnormal_amount = abs(atol(summary_map["pf_amount"].c_str()) - atol(summary_map["ch_amount"].c_str()))
+					  + abs(atol(summary_map["pf_ref_amount"].c_str()) - atol(summary_map["ch_ref_amount"].c_str()));
 
 	if(abnormal_cnt != 0 || abnormal_amount != 0)
 	{
@@ -1535,7 +1815,7 @@ INT32 CPayTransactionFlowDao::InsertSummaryDB(clib_mysql& sql_instance,const std
 		  <<bill_result<<");";
 
 
-	CDEBUG_LOG(" InsertAbnormalDB:sql_stmt:[%s].", sqlss.str().c_str());
+	CDEBUG_LOG(" InsertSummaryDB:sql_stmt:[%s].", sqlss.str().c_str());
 	iRet = sql_instance.query(sqlss.str().c_str());
 	if (iRet != 0)
 	{
@@ -1565,9 +1845,9 @@ INT32 CPayTransactionFlowDao::InsertTradeTypeOrderToDB(clib_mysql& sql_instance,
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
 		" insert into bill_db.%s (bm_id,pay_time, order_no, out_order_no, transaction_id, mch_id, channel_id, pay_channel, trade_type, order_status, total_fee, total_commission, shop_amount, "
-		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit, bill_status) select bm_id,pay_time, order_no, out_order_no, transaction_id, "
+		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit,sub_body, bill_status) select bm_id,pay_time, order_no, out_order_no, transaction_id, "
 		" mch_id, channel_id, pay_channel, trade_type, order_status, total_fee, total_commission, shop_amount, refund_fee, refund_no, out_refund_no,  "
-		" refund_id, payment_profit, channel_profit, bm_profit, service_profit, bill_status from bill_db.t_order_all_flow "
+		" refund_id, payment_profit, channel_profit, bm_profit, service_profit,sub_body, bill_status from bill_db.t_order_all_flow "
 		" where bm_id ='%s' and pay_channel = '%s'",
 		strTableName.c_str(),strBmId.c_str(), pay_channel.c_str());
 
@@ -1638,7 +1918,7 @@ INT32 CPayTransactionFlowDao::TruncateEveryPaymentTypeSysFlowData(clib_mysql& sq
 	std::string strAliOrderSql 				= "DELETE FROM bill_db.t_order_alipay_flow where bm_id ='" + strBmId + "';";
 	std::string strAliOrderChannelSql 		= "DELETE FROM bill_db.t_order_channel_alipay_flow where bm_id ='" + strBmId + "';";
 
-	CDEBUG_LOG("delete table:t_order_all_flow,t_order_channel_all_flow,t_wxpay_flow,t_order_wxpay_flow,t_order_channel_wxpay_flow,");
+	//CDEBUG_LOG("delete table:t_order_all_flow,t_order_channel_all_flow,t_wxpay_flow,t_order_wxpay_flow,t_order_channel_wxpay_flow,");
 	//开启事务
 	iRet = sql_instance.query("START TRANSACTION");
 	iRet = sql_instance.query(strOrderAllSql.c_str());
@@ -1723,9 +2003,9 @@ INT32 CPayTransactionFlowDao::InsertAliPayIdenticalToDB(clib_mysql& sql_instance
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
 		" insert into bill_db.t_bill_success_flow (bm_id,pay_time, order_no, out_order_no, transaction_id, mch_id, channel_id, pay_channel, trade_type, order_status, total_fee, total_commission, shop_amount, "
-		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit, bill_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
+		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit,sub_body, bill_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
 		" shop.mch_id, shop.channel_id, shop.pay_channel, shop.trade_type, shop.order_status, shop.total_fee, shop.total_commission, shop.shop_amount, shop.refund_fee, shop.refund_no, shop.out_refund_no,  "
-		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit, shop.bill_status from bill_db.t_alipay_flow as ali inner JOIN  bill_db.t_order_alipay_flow as shop "
+		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit, shop.sub_body,shop.bill_status from bill_db.t_alipay_flow as ali inner JOIN  bill_db.t_order_alipay_flow as shop "
 		" on shop.bm_id = ali.bm_id and shop.order_no = ali.order_no  and ABS(ali.total_fee * 100) = shop.total_fee  and shop.order_status = ali.order_status "
 		" where shop.bm_id ='%s' and shop.pay_time >= '%s' and shop.pay_time <= '%s' and shop.order_status = '%s'",  //SUCCESS
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str(), order_status.c_str());
@@ -1761,9 +2041,9 @@ INT32 CPayTransactionFlowDao::InsertAliPayIdenticalRefundToDB(clib_mysql& sql_in
 	snprintf(sql_stmt,
 		sizeof(sql_stmt),
 		" insert into bill_db.t_bill_success_flow (bm_id,pay_time, order_no, out_order_no, transaction_id, mch_id, channel_id, pay_channel, trade_type, order_status, total_fee, total_commission, shop_amount, "
-		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit, bill_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
+		" refund_fee, refund_no, out_refund_no, refund_id, payment_profit, channel_profit, bm_profit, service_profit,sub_body, bill_status) select shop.bm_id,shop.pay_time, shop.order_no, shop.out_order_no, shop.transaction_id, "
 		" shop.mch_id, shop.channel_id, shop.pay_channel, shop.trade_type, shop.order_status, shop.total_fee, shop.total_commission, shop.shop_amount, shop.refund_fee, shop.refund_no, shop.out_refund_no,  "
-		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit, shop.bill_status from bill_db.t_alipay_flow as ali inner JOIN  bill_db.t_order_alipay_flow as shop "
+		" shop.refund_id, shop.payment_profit, shop.channel_profit, shop.bm_profit, shop.service_profit,shop.sub_body, shop.bill_status from bill_db.t_alipay_flow as ali inner JOIN  bill_db.t_order_alipay_flow as shop "
 		" on shop.bm_id = ali.bm_id and shop.order_no = ali.order_no  and ali.refund_no = shop.refund_no and ABS(ali.total_fee * 100) = shop.refund_fee and shop.order_status = ali.order_status "
 		" where shop.bm_id ='%s' and shop.pay_time >= '%s' and shop.pay_time <= '%s' and shop.order_status = 'REFUND'",  //SUCCESS
 		strBmId.c_str(), strBeginTime.c_str(), strEndTime.c_str());

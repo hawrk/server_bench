@@ -39,9 +39,13 @@ const INT32 CMD_SPEEDPOS_APAY_BILL_DEAL  = 5110;   //代付对账处理
 
 const INT32 CMD_SPEEDPOS_APAY_ABNOR_BILL_QRY  = 5120;   //代付对账异常订单查询
 
-const INT32 CMD_SPEEDPOS_SETTLE_ACCTINFO_MODIFY  = 5130;   //结算账户信息编辑
+const INT32 CMD_SPEEDPOS_SETTLE_ACCTINFO_SYNC  = 5130;   //结算账户信息同步
 
 const INT32 CMD_SPEEDPOS_APAY_BILL_LOG_QRY  = 5140;   //代付对账记录查询
+
+const INT32 CMD_SPEEDPOS_DISTRI_OVERVIEW = 6010; //清分总览
+const INT32 CMD_SPEEDPOS_DISTRI_G = 6020; //清分总览
+const INT32 CMD_SPEEDPOS_DISTRI_DETAIL = 6030; //清分总览
 
 #define MAX_MONEY                 		9999999999       //最大金额
 #define LIMIT_MIN                         1       //最小每页显示记录数
@@ -57,9 +61,14 @@ const INT32 CMD_SPEEDPOS_APAY_BILL_LOG_QRY  = 5140;   //代付对账记录查询
 //db
 #define PAY_ORDER_DB   			"pay_order_db"
 #define BILL_DB        			"bill_db"
+#define SHOP_DB                 "shop_db"
 //trade table
 #define ORDER          			"t_order"
 #define ORDER_CHANNEL  			"t_order_channel"
+
+//shop table
+#define SHOP_GATEWAY            "gateway"
+
 //bill table
 #define ORDER_ALL_FLOW          "t_order_all_flow"
 #define ORDER_CHANNEL_FLOW      "t_order_channel_all_flow"

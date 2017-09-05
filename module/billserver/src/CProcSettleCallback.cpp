@@ -186,8 +186,20 @@ INT32 CProcSettleCallback::CallSettle()
 		remitBill.sType = vStr[3];
 		remitBill.sPayTime = vStr[1];
 		remitBill.sRemitTime = getSysDate();
-		status = (vStr[13] == "0000") ? 1:-2;
+		remitBill.sRetCode = vStr[13];
 		remitBill.sPayRemark = vStr[14];
+		if(vStr[13] == "0000")
+		{
+			status = 1;
+		}
+		else if(vStr[13] == "0001")
+		{
+			status = 3;  //已接收
+		}
+		else
+		{
+			status = -2;   //结算失败
+		}
 
 		iRet = g_cOrderServer.CallUpdateSettleLogApi(m_stReq.sBmId, m_stReq.sPayChannel, remitBill, status);
 		if (iRet < 0)
@@ -198,7 +210,8 @@ INT32 CProcSettleCallback::CallSettle()
 			CERROR_LOG("CallUpdateSettleLogApi failed! "
 				"Ret[%d].\n",
 				iRet);
-			return -3060;
+			//return -3060;  //继续处理下一笔
+			continue;
 		}
 	}
 	//处理完成后，删除源目录的加密文件

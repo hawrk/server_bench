@@ -30,9 +30,12 @@
 #include "CAgentPayBillDealTask.h"
 #include "CAgentPayAbnormalQryTask.h"
 
-#include "CSettleAcctinfoModifyTask.h"
+#include "CSettleAcctinfoSyncTask.h"
 #include "CAgentPayBillLogQryTask.h"
 
+#include "CDistributionOverview.h"
+#include "CDistributionSummary.h"
+#include "CDistributionDetail.h"
 //base::comm::DCReporter  g_DCReporter;
 
 // 每个Worker进程全局的OrderServer实例
@@ -73,9 +76,13 @@ void RegTask()
 
 	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_APAY_ABNOR_BILL_QRY,CAgentPayAbnormalQryTask);  //代付对账处理	
 
-	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_SETTLE_ACCTINFO_MODIFY,CSettleAcctinfoModifyTask);  //结算账户信息编辑
+	REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_SETTLE_ACCTINFO_SYNC,CSettleAcctinfoSyncTask);  //结算账户信息同步
 
     REGISTER_TASK(ORDER_VER_1,CMD_SPEEDPOS_APAY_BILL_LOG_QRY,CAPayBillLogQryTask);  //代付对账记录查询
+    
+    REGISTER_TASK(ORDER_VER_1, CMD_SPEEDPOS_DISTRI_OVERVIEW, CDistributionOverview); //清分总览
+    REGISTER_TASK(ORDER_VER_1, CMD_SPEEDPOS_DISTRI_G, CDistributionSummary); //清分细分概览
+    REGISTER_TASK(ORDER_VER_1, CMD_SPEEDPOS_DISTRI_DETAIL, CDistributionDetail); //清分细节
 }
 
 // 初始化方法（可选实现）,返回0成功，非0失败

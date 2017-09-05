@@ -31,9 +31,23 @@ public:
 
 	virtual void ProcException(ProPullBillReq& m_stReq,int starttime,int exce_type = 0);
 
+	virtual void Copy2GetFile(ProPullBillReq& m_Req,int starttime);
+
+	void TrimAllBillFile(ProPullBillReq& m_stReq);
+
+	void CreateCheckedBillFile(ProPullBillReq& m_stReq,int starttime,int endtime);
+
+
 protected:
 	clib_mysql* pBillDb;
 	CPayTransactionFlowDao m_stTransFlowDao;
+
+	vector<CheckedBillData> checkbilldata;
+
+	CBillFile *checkedbillFile;
+
+
+	vector<string> m_file_vec;
 };
 
 

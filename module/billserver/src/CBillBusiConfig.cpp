@@ -87,15 +87,15 @@ CBillBusiConfig::CBillBusiConfig(const char* szFileName)
 		mainConfig.sFtpUser = pt.get<string>("root.SftpUser");
 		mainConfig.sFtpPass = pt.get<string>("root.SftpPass");
 
-		//??��2???����1????? begin
-		apayMainConf.sFtpIp = pt.get<string>("root.apaySftpIp");
-		apayMainConf.iSftpPort = pt.get<int>("root.apaySftpPort");
-		apayMainConf.sFtpUser = pt.get<string>("root.apaySftpUser");
-		apayMainConf.sFtpPass = pt.get<string>("root.apaySftpPass");
+		//´ú¸¶Ïà¹ØÅäÖÃ begin
+		//apayMainConf.sFtpIp = pt.get<string>("root.apaySftpIp");
+		//apayMainConf.iSftpPort = pt.get<int>("root.apaySftpPort");
+		//apayMainConf.sFtpUser = pt.get<string>("root.apaySftpUser");
+		//apayMainConf.sFtpPass = pt.get<string>("root.apaySftpPass");
 
 		apayMainConf.loadBillFileShPath = pt.get<string>("root.apayLoadFileShPath");
 		apayMainConf.loadBillFileShName = pt.get<string>("root.apayLoadFileShName");
-		apayMainConf.MchBillFilePath = pt.get<string>("root.apayMchBillFilePath");
+		//apayMainConf.MchBillFilePath = pt.get<string>("root.apayMchBillFilePath");
 
 		m_ApayErrFile = pt.get<string>("root.apayErrorFilePath");
 		//´ú¸¶Ïà¹ØÅäÖÃ end

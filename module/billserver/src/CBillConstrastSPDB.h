@@ -48,7 +48,7 @@ public:
 	void GetBatchNo(const string& strtype,const string& bill_date,string& seq_no);
 
 	//处理订单溢出
-	void ProcOverFlowData(const string& resBody,const string& tableName);
+	void ProcOverFlowData(const string& resBody,const string& tableName,ProPullBillReq& m_stReq);
 
 protected:
 	clib_mysql* pBillDb;

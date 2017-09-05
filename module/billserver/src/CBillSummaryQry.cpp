@@ -190,7 +190,7 @@ void CBillSummaryQry::DealQuerySummaryCount()
     if(iRet == 1)  //有记录
     {
     	//m_jsonList.clear();
-    	//m_ContentJsonMap.clear();
+    	m_ContentJsonMap.clear();
 
     	m_ContentJsonMap.insert(JsonMap::value_type(JsonType("net_amount"), JsonType(outMap["net_amount"])));
     	m_ContentJsonMap.insert(JsonMap::value_type(JsonType("net_fee"), JsonType(outMap["net_fee"])));

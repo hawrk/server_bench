@@ -73,16 +73,24 @@ class CPayTransactionFlowDao : public CObject
 		INT32 EmptyTableData(clib_mysql& sql_instance,
 											const std::string& TableName, const std::string& strBmid,
 											const std::string& strBeginTime,const std::string& strEndTime);
-
+		//本地和渠道都是成功
 		INT32 InsertPayIdenticalWxToDB(clib_mysql& sql_instance, 
 							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime);
 
+		//本地和渠道都是退款
 		INT32 InsertRefundIdenticalWxToDB(clib_mysql& sql_instance, 
 							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime);
 
+		//金额不符
+		INT32 InsertAmountNotMatchToDB(clib_mysql& sql_instance,
+							const std::string& strBmId,const std::string& strPayChannel,
+							const std::string& strBillDate,const std::string& strBatchNo,
+							const std::string& strBeginTime, const std::string& strEndTime);
+
+		//微信成功多
 		INT32 InsertPayDistinctWxToDB(clib_mysql& sql_instance, 
 							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime);
-
+		//微信退款的多
 		INT32 InsertRefundDistinctWxToDB(clib_mysql& sql_instance, 
 							const std::string& strBmId, const std::string& strBeginTime, const std::string& strEndTime);
 
@@ -92,6 +100,11 @@ class CPayTransactionFlowDao : public CObject
 		//本地退款多
 		INT32 InsertPayRefundToDB(clib_mysql& sql_instance, const std::string& strBmId,
 				const std::string& strBeginTime, const std::string& strEndTime,const std::string& paychannel);
+
+		//生成本地对账成功的对账单
+		int GetCheckedBillData(clib_mysql& sql_instance,const std::string& strBmId, const std::string strChannel,
+							const std::string& strBeginTime, const std::string& strEndTime,std::vector<CheckedBillData>& vecbilldata);
+		//
 
 		int GetPayBillData(clib_mysql& sql_instance,
 							const std::string& strBmId, const std::string strChannel, const std::string& strBeginTime, const std::string& strEndTime,
@@ -125,7 +138,7 @@ class CPayTransactionFlowDao : public CObject
 
 		//清分表操作
 		INT32 InsertDistributionDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,
-						const std::string& pay_channel,OrderStat& ordStat,const char* fund_type);
+						const std::string& pay_channel,const std::string& channel_code,OrderStat& ordStat,TRemitBill& remitBill,const char* fund_type);
 
 		//结算表操作
 		INT32 InsertSettleDB(clib_mysql& sql_instance,const std::string& strBmId,const std::string& bill_date,const std::string& batch_no,

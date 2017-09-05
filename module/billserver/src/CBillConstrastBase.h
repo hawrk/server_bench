@@ -79,13 +79,12 @@ public:
 	/*
 	 * @brief 直接复制
 	 */
-	void Copy2GetFile(ProPullBillReq& m_Req,int starttime);
+	virtual void Copy2GetFile(ProPullBillReq& m_Req,int starttime);
 
 	/*
 	 * @brief trim billfile
 	 */
 	void TrimBillFile(ProPullBillReq& m_stReq);
-
 
 protected:
 

@@ -59,7 +59,7 @@ DEFS		:= ${DEFS} -DDEBUG -pg
 endif
 
 CC			:= gcc
-CFLAGS		:= -pipe  -O2 -Wall $(INCS) $(DEFS) -fPIC
+CFLAGS		:= -pipe  -O2 -Wall $(INCS) $(DEFS) -fPIC -std=c++0x
 CXX			:= g++
 CXXFLAGS	:= $(CFLAGS)
 
@@ -70,8 +70,9 @@ OBJS := order_spp_main.o CBillBusiConfig.o  CSpeedPosConfig.o \
 		BankFactory.o CBillConstrastBase.o CBillConstrastCommon.o \
 		CProcBillContrastTask.o CProcSettleCallback.o  CPayTransactionFlowDao.o \
 		CProcPushSysBillTask.o  CBillConstrastSPDB.o CBillDownLoadManage.o CBillBatchManage.o\
-		CBillSummaryQry.o CBillAbnormalQry.o CSettleQryTask.o CSettleAcctinfoModifyTask.o\
+		CBillSummaryQry.o CBillAbnormalQry.o CSettleQryTask.o CSettleAcctinfoSyncTask.o\
 		CAgentPayBase.o CRabbitMQClient.o CAgentPayBillDealTask.o CAgentPayAbnormalQryTask.o CAgentPayBillLogQryTask.o\
+		CDistributionOverview.o CDistributionSummary.o CDistributionDetail.o\
 		$(COMM)/md5c.o $(COMM)/log/clog.o\
 		$(COMM)/config/HttpConfig.o $(COMM)/config/ServerConfig.o\
 		$(COMM)/svr/SvrClient.o 

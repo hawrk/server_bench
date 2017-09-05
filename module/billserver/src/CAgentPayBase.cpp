@@ -132,7 +132,7 @@ INT32 CallRabbitMQNew(NameValueMap& reqMap)
 	szSqlBuf	<<	" SELECT "
 				<<	"order_no,out_order_no,order_type,biz_type,mch_id,mch_name,pay_channel_id,pay_channel_name,mch_agentpay_acct_id,"
 				<<	"cur_type,payment_fee,payment_profit,payee_acct_no,payee_acct_name,card_type,payee_bank_no,payee_bank_name,"
-				<<	"summar_code,payee_phone_num,payee_acct_type,id_type,id_num,order_status,err_msg,create_time,pay_time,modify_time"
+				<<	"summar_code,payee_phone_num,payee_acct_type,id_type,id_num,order_status,err_msg,create_time,pay_time,settle_date,modify_time"
 				<<	" FROM "
 				<<	AGENT_PAY_ORDER_DB	<<	"_"	<<	tempMap["db_name"]	<<	"." <<	APAY_ORDER_TABLE	<<	"_"	<<	tempMap["table_name"]
 				<<	" WHERE "

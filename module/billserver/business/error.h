@@ -61,6 +61,7 @@ const int ERR_CREATE_ORDER = 12002; //创建订单失败
 
 /* bill settle error */
 const int ERR_BILL_SETTLE_NOT_EXIST = 13001; //结算单不存在
+const int ERR_BILL_SETTLE_STATUS = 13002; //结算状态有误
 
 const int ERR_ORDER_TOTALNET_IS_NOT_ENOUGH_TO_REFUND = -650;
 
@@ -337,6 +338,7 @@ public:
 		this->insert(std::make_pair(ERR_DB_UPDATE,"数据更新失败！"));
 
 		this->insert(std::make_pair(ERR_BILL_BATCH_EXIST,"对账记录已存在！"));
+
 	}
 
 	virtual ~ErrParamMap()
